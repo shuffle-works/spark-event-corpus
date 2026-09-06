@@ -45,6 +45,12 @@ def test_env_for_run_values_are_all_non_empty_strings():
 
 
 def test_hard_won_conf_flags_are_still_present():
+    # Comment-only mentions (e.g. this repo's own explanatory comments citing
+    # a flag by name) must not satisfy this check: only a real --conf line
+    # proves the flag itself, not just a note about it, is still there.
+    command_lines = "\n".join(
+        line for line in COMPOSE_TEXT.splitlines() if not line.lstrip().startswith("#")
+    )
     for flag in (
         # Ivy's cache must point somewhere writable: the spark user has no HOME.
         "spark.jars.ivy=",
@@ -54,8 +60,14 @@ def test_hard_won_conf_flags_are_still_present():
         "spark.eventLog.compress=false",
         # Without this every join broadcasts and no shuffle is ever produced.
         "spark.sql.autoBroadcastJoinThreshold=-1",
+        # Without this, AQE erases the real shuffle's partition count back
+        # down to a handful on every aqe=true row.
+        "spark.sql.adaptive.coalescePartitions.enabled=false",
+        # Without this, dynamic allocation can reclaim an executor holding
+        # shuffle data the real shuffle now produces.
+        "spark.dynamicAllocation.shuffleTracking.enabled=true",
     ):
-        assert flag in COMPOSE_TEXT, flag
+        assert flag in command_lines, flag
 
 
 def test_both_workers_advertise_an_explicit_core_count():

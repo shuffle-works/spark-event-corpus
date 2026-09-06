@@ -59,6 +59,18 @@ services:
     # SortMergeJoin is what makes the shuffle-partitions axis (and the SHFL/
     # SPILL/PART/TINY/SKEW detectors that depend on a real shuffle) mean
     # anything.
+    # spark.sql.adaptive.coalescePartitions.enabled=false: with AQE on
+    # (aqe=true rows), AQE otherwise merges the real shuffle's small
+    # partitions back down to a handful once they're under its 64MB
+    # advisory size, silently erasing the PART/TINY/SKEW signal on exactly
+    # the pairwise rows that target them. Disabling only this AQE
+    # sub-feature keeps the rest of AQE's behavior (join/skew re-planning)
+    # intact while preserving the shuffle-partitions axis's real effect.
+    # spark.dynamicAllocation.shuffleTracking.enabled=true: most runs use
+    # dynamic_allocation=true, and now that a real shuffle exists,
+    # reclaiming an idle executor without this would take its shuffle
+    # files with it (FetchFailedException / stage retry) with no external
+    # shuffle service configured.
     command: >
       --master spark://spark-master:7077
       --conf spark.eventLog.enabled=true
@@ -66,8 +78,10 @@ services:
       --conf spark.eventLog.rolling.enabled=false
       --conf spark.eventLog.compress=false
       --conf spark.sql.adaptive.enabled=${AQE}
+      --conf spark.sql.adaptive.coalescePartitions.enabled=false
       --conf spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}
       --conf spark.dynamicAllocation.enabled=${DYNAMIC_ALLOCATION}
+      --conf spark.dynamicAllocation.shuffleTracking.enabled=true
       --conf spark.speculation=${SPECULATION}
       --conf spark.jars.ivy=/tmp/.ivy2
       --conf spark.sql.autoBroadcastJoinThreshold=-1
