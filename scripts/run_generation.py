@@ -75,6 +75,7 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
 def commit_run(run: Run, log_file: Path) -> None:
     validate_ndjson_event_log(log_file)
     dest = DATA_REPO / "logs" / f"{run.id}.ndjson"
+    dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(log_file, dest)
     entry = {
         "id": run.id,
@@ -136,6 +137,10 @@ def main() -> None:
             commit_run(run, log_file)
         except UnknownTableFormatMapping as exc:
             print(f"SKIPPED: {run.id}: no upstream table-format artifact available yet ({exc})")
+            # run_dir (and the workload-output dir under it) were created
+            # above and nothing ever wrote to them, so drop them rather than
+            # leave an empty directory per skipped run.
+            shutil.rmtree(run_dir, ignore_errors=True)
             continue
         print(f"done: {run.id}")
 
