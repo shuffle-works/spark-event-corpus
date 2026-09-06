@@ -22,7 +22,14 @@ def load_catalog(catalog_path: Path) -> list[dict[str, Any]]:
 
 
 def save_catalog(catalog_path: Path, entries: list[dict[str, Any]]) -> None:
-    catalog_path.write_text(json.dumps(entries, indent=2, sort_keys=True) + "\n")
+    # Written via a same-directory temp file and an atomic rename, never
+    # truncated in place: run_generation.py derives its whole resume decision
+    # (already_done) from this file, so a crash mid-write would leave a
+    # partial index.json that either silently means "redo everything" or
+    # crashes the next invocation on json.JSONDecodeError.
+    tmp_path = catalog_path.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(entries, indent=2, sort_keys=True) + "\n")
+    tmp_path.replace(catalog_path)
 
 
 def append_entry(catalog_path: Path, entry: dict[str, Any]) -> list[dict[str, Any]]:
