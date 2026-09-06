@@ -35,7 +35,15 @@ def extra_confs_for(run: Run) -> str:
     return ""
 
 
-def env_for_run(run: Run, event_log_dir: Path, row_count: int = 5_000_000) -> dict[str, str]:
+def env_for_run(
+    run: Run,
+    event_log_dir: Path,
+    workload_output_dir: Path,
+    row_count: int = 5_000_000,
+) -> dict[str, str]:
+    """Every ${VAR} compose.yaml interpolates, in one dict. Callers should not
+    need to graft extra keys on afterwards; tests/test_compose_contract.py
+    asserts this stays exhaustive."""
     return {
         "SPARK_VERSION": run.spark_version,
         "AQE": str(run.config["aqe"]).lower(),
@@ -55,4 +63,5 @@ def env_for_run(run: Run, event_log_dir: Path, row_count: int = 5_000_000) -> di
         "PACKAGES_FLAG": packages_for(run),
         "TABLE_FORMAT_CONF_FLAGS": extra_confs_for(run),
         "EVENT_LOG_DIR": str(event_log_dir),
+        "WORKLOAD_OUTPUT_DIR": str(workload_output_dir),
     }

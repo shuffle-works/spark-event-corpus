@@ -31,7 +31,7 @@ GENERATION_TAG = current_generation_tag()
 
 
 def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
-    env = {**os.environ, **env_for_run(run, event_log_dir), "WORKLOAD_OUTPUT_DIR": str(workload_output_dir)}
+    env = {**os.environ, **env_for_run(run, event_log_dir, workload_output_dir)}
     subprocess.run(
         ["docker", "compose", "up", "-d", "spark-master", "spark-worker-1", "spark-worker-2"],
         cwd=REPO_ROOT, env=env, check=True,

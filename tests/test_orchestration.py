@@ -43,7 +43,13 @@ def test_extra_confs_for_iceberg_configures_extension_and_catalog():
 
 
 def test_env_for_run_maps_slow_host_to_worker_cpu_limit():
-    env = env_for_run(make_run(slow_host=True), Path("/tmp/x"))
+    env = env_for_run(make_run(slow_host=True), Path("/tmp/x"), Path("/tmp/y"))
     assert env["WORKER_2_CPU_LIMIT"] == "0.5"
-    env2 = env_for_run(make_run(slow_host=False), Path("/tmp/x"))
+    env2 = env_for_run(make_run(slow_host=False), Path("/tmp/x"), Path("/tmp/y"))
     assert env2["WORKER_2_CPU_LIMIT"] == "2"
+
+
+def test_env_for_run_includes_both_bind_mount_dirs():
+    env = env_for_run(make_run(), Path("/tmp/x"), Path("/tmp/y"))
+    assert env["EVENT_LOG_DIR"] == "/tmp/x"
+    assert env["WORKLOAD_OUTPUT_DIR"] == "/tmp/y"
