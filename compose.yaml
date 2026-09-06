@@ -50,6 +50,7 @@ services:
       --conf spark.speculation=${SPECULATION}
       --conf spark.jars.ivy=/tmp/.ivy2
       ${PACKAGES_FLAG}
+      ${TABLE_FORMAT_CONF_FLAGS}
       /workload/generate_events.py
       --row-count ${ROW_COUNT}
       --skew ${SKEW}

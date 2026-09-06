@@ -16,6 +16,25 @@ def packages_for(run: Run) -> str:
     return f"--packages {artifact_for(minor_line, run.table_format)}"
 
 
+def extra_confs_for(run: Run) -> str:
+    """--conf flags for the Spark SQL extension/catalog each table format
+    needs to actually read/write, beyond the --packages jar. Parquet needs
+    neither."""
+    if run.table_format == "delta":
+        return (
+            "--conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension "
+            "--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        )
+    if run.table_format == "iceberg":
+        return (
+            "--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions "
+            "--conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog "
+            "--conf spark.sql.catalog.local.type=hadoop "
+            "--conf spark.sql.catalog.local.warehouse=/tmp/iceberg-warehouse"
+        )
+    return ""
+
+
 def env_for_run(run: Run, event_log_dir: Path, row_count: int = 5_000_000) -> dict[str, str]:
     return {
         "SPARK_VERSION": run.spark_version,
@@ -29,5 +48,6 @@ def env_for_run(run: Run, event_log_dir: Path, row_count: int = 5_000_000) -> di
         "TABLE_FORMAT": run.table_format,
         "ROW_COUNT": str(row_count),
         "PACKAGES_FLAG": packages_for(run),
+        "TABLE_FORMAT_CONF_FLAGS": extra_confs_for(run),
         "EVENT_LOG_DIR": str(event_log_dir),
     }
