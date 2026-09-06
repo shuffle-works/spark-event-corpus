@@ -53,6 +53,15 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
         )
     finally:
         subprocess.run(["docker", "compose", "down"], cwd=REPO_ROOT, env=env, check=True)
+        # workload_output_dir only exists as a host bind mount so Delta's
+        # post-commit read-back can see it from every container (see the
+        # comment where it's created in main()); once the containers are
+        # gone there's no reason to keep the table data it collected on the
+        # host, at ROW_COUNT=5_000_000 real runs this is real Parquet/Delta/
+        # Iceberg data, easily many GB across the full matrix. Must run
+        # whether the run above succeeded or raised, so a mid-run failure
+        # doesn't leak this directory either.
+        shutil.rmtree(workload_output_dir, ignore_errors=True)
 
     produced = [p for p in event_log_dir.glob("*") if p.is_file()]
     if len(produced) != 1:
