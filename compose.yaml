@@ -43,6 +43,13 @@ services:
       - ${EVENT_LOG_DIR}:/tmp/spark-events
       - ${WORKLOAD_OUTPUT_DIR}:/tmp/spark-workload-output
     entrypoint: ["/opt/spark/bin/spark-submit"]
+    # spark.sql.autoBroadcastJoinThreshold=-1: the workload's dimension tables
+    # are far under the 10MB default, so every join planned as a
+    # BroadcastHashJoin -- no Exchange, therefore no shuffle, no spill, and
+    # spark.sql.shuffle.partitions had no observable effect at all. Forcing
+    # SortMergeJoin is what makes the shuffle-partitions axis (and the SHFL/
+    # SPILL/PART/TINY/SKEW detectors that depend on a real shuffle) mean
+    # anything.
     command: >
       --master spark://spark-master:7077
       --conf spark.eventLog.enabled=true
@@ -54,6 +61,7 @@ services:
       --conf spark.dynamicAllocation.enabled=${DYNAMIC_ALLOCATION}
       --conf spark.speculation=${SPECULATION}
       --conf spark.jars.ivy=/tmp/.ivy2
+      --conf spark.sql.autoBroadcastJoinThreshold=-1
       ${PACKAGES_FLAG}
       ${TABLE_FORMAT_CONF_FLAGS}
       /workload/generate_events.py
