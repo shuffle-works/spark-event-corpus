@@ -47,6 +47,7 @@ services:
       --master spark://spark-master:7077
       --conf spark.eventLog.enabled=true
       --conf spark.eventLog.dir=/tmp/spark-events
+      --conf spark.eventLog.rolling.enabled=false
       --conf spark.sql.adaptive.enabled=${AQE}
       --conf spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}
       --conf spark.dynamicAllocation.enabled=${DYNAMIC_ALLOCATION}

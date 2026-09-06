@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from corpus.catalog import append_entry, sha256_of
+from corpus.catalog import append_entry, load_catalog, sha256_of
 from corpus.matrix import Run, baseline_runs, pairwise_runs
 from corpus.orchestration import env_for_run
 from corpus.table_formats import UnknownTableFormatMapping
@@ -100,7 +100,17 @@ def main() -> None:
     latest = versions[-1]
     runs: list[Run] = baseline_runs(versions) + pairwise_runs(latest)
 
+    # Restarts must not re-attempt runs a prior invocation already finished
+    # and cataloged: append_entry() raises ValueError on a duplicate id,
+    # which would otherwise crash the whole script on the first repeat.
+    # Loaded once per invocation, not per run, since a run can commit to the
+    # catalog mid-loop.
+    already_done = {entry["id"] for entry in load_catalog(CATALOG_PATH)}
+
     for run in runs:
+        if run.id in already_done:
+            print(f"SKIPPED (already done): {run.id}")
+            continue
         run_dir = args.event_log_dir / run.id
         run_dir.mkdir(parents=True, exist_ok=True)
         # apache/spark's container user (uid 185) needs to write into this
