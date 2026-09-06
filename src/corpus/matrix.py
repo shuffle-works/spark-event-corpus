@@ -5,8 +5,11 @@ The seven pairwise rows are a Taguchi L8(2^7) orthogonal array over
 caching): the minimal covering design guaranteeing every pairwise combination
 of the seven axes appears at least once. The all-baseline 8th row is dropped
 since baseline_runs() already covers it. Do not add an 8th axis without
-regenerating this whole table (L8 only covers 7 two-level factors); see
-docs/superpowers/specs/2026-09-05-spark-log-corpus-design.md.
+regenerating this whole table: L8 only covers 7 two-level factors, so an
+eighth would silently stop being pairwise-covered.
+
+Each row also carries the detector tags it is meant to make fire, so a
+regenerated corpus can be checked for signal rather than just for having run.
 """
 from __future__ import annotations
 
