@@ -21,6 +21,23 @@ TABLE_FORMAT_ARTIFACTS: dict[str, dict[str, str]] = {
         "delta": "io.delta:delta-spark_2.12:3.2.0",
         "iceberg": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.1",
     },
+    # Spark 4.0 dropped Scala 2.12 support (SPARK-45314), so every Spark 4.x
+    # artifact below uses the _2.13 suffix instead of 3.5's _2.12.
+    "4.0": {
+        "delta": "io.delta:delta-spark_4.0_2.13:4.4.0",
+        "iceberg": "org.apache.iceberg:iceberg-spark-runtime-4.0_2.13:1.11.0",
+    },
+    "4.1": {
+        "delta": "io.delta:delta-spark_4.1_2.13:4.4.0",
+        "iceberg": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+    },
+    "4.2": {
+        "delta": "io.delta:delta-spark_4.2_2.13:4.4.0",
+        # No "iceberg" key: Iceberg's latest release (1.11.0) has not yet
+        # published a Spark 4.2 runtime artifact. artifact_for("4.2",
+        # "iceberg") is expected to raise UnknownTableFormatMapping until
+        # upstream Iceberg ships one.
+    },
 }
 
 

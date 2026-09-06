@@ -13,3 +13,14 @@ def test_artifact_for_known_version():
 def test_artifact_for_unknown_version_fails_loudly():
     with pytest.raises(UnknownTableFormatMapping):
         artifact_for("9.9", "delta")
+
+
+def test_artifact_for_spark_4_0_delta():
+    assert artifact_for("4.0", "delta") == "io.delta:delta-spark_4.0_2.13:4.4.0"
+
+
+def test_artifact_for_spark_4_2_iceberg_has_no_mapping_yet():
+    # Iceberg has not published a Spark 4.2 runtime as of its latest release
+    # (1.11.0); this must keep failing loudly, not silently skip coverage.
+    with pytest.raises(UnknownTableFormatMapping):
+        artifact_for("4.2", "iceberg")

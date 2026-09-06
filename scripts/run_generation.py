@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from corpus.catalog import append_entry, sha256_of
 from corpus.matrix import Run, baseline_runs, pairwise_runs
 from corpus.orchestration import env_for_run
+from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import current_generation_tag
 from corpus.validate import validate_ndjson_event_log
 from corpus.versions import resolve_versions
@@ -99,8 +100,12 @@ def main() -> None:
         # FileNotFoundException: ... (Permission denied) on the event-log
         # file (confirmed in Task 8's manual verification).
         run_dir.chmod(0o777)
-        log_file = run_one(run, run_dir)
-        commit_run(run, log_file)
+        try:
+            log_file = run_one(run, run_dir)
+            commit_run(run, log_file)
+        except UnknownTableFormatMapping as exc:
+            print(f"SKIPPED: {run.id}: no upstream table-format artifact available yet ({exc})")
+            continue
         print(f"done: {run.id}")
 
 
