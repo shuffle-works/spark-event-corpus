@@ -48,6 +48,7 @@ services:
       --conf spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}
       --conf spark.dynamicAllocation.enabled=${DYNAMIC_ALLOCATION}
       --conf spark.speculation=${SPECULATION}
+      --conf spark.jars.ivy=/tmp/.ivy2
       ${PACKAGES_FLAG}
       /workload/generate_events.py
       --row-count ${ROW_COUNT}
