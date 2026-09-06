@@ -42,7 +42,12 @@ def env_for_run(run: Run, event_log_dir: Path, row_count: int = 5_000_000) -> di
         "SHUFFLE_PARTITIONS": str(run.config["shuffle_partitions"]),
         "DYNAMIC_ALLOCATION": str(run.config["dynamic_allocation"]).lower(),
         "SPECULATION": str(run.config["speculation"]).lower(),
-        "WORKER_2_CPU_LIMIT": "1" if run.config["slow_host"] else "2",
+        # Both workers advertise 2 cores unconditionally (see compose.yaml), so
+        # this quota throttles how fast worker-2 runs its tasks rather than how
+        # many it is given. 0.5 CPU against 2 concurrent task slots is real
+        # contention; the old "1" merely made the worker advertise 1 core and
+        # left per-task speed untouched.
+        "WORKER_2_CPU_LIMIT": "0.5" if run.config["slow_host"] else "2",
         "SKEW": run.config["skew"],
         "PERSIST_MODE": run.config["caching"],
         "TABLE_FORMAT": run.table_format,

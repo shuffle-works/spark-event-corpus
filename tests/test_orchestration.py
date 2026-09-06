@@ -44,6 +44,6 @@ def test_extra_confs_for_iceberg_configures_extension_and_catalog():
 
 def test_env_for_run_maps_slow_host_to_worker_cpu_limit():
     env = env_for_run(make_run(slow_host=True), Path("/tmp/x"))
-    assert env["WORKER_2_CPU_LIMIT"] == "1"
+    assert env["WORKER_2_CPU_LIMIT"] == "0.5"
     env2 = env_for_run(make_run(slow_host=False), Path("/tmp/x"))
     assert env2["WORKER_2_CPU_LIMIT"] == "2"
