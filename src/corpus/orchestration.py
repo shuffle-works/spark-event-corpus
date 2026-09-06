@@ -30,7 +30,7 @@ def extra_confs_for(run: Run) -> str:
             "--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions "
             "--conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog "
             "--conf spark.sql.catalog.local.type=hadoop "
-            "--conf spark.sql.catalog.local.warehouse=/tmp/iceberg-warehouse"
+            "--conf spark.sql.catalog.local.warehouse=/tmp/spark-workload-output/iceberg-warehouse"
         )
     return ""
 

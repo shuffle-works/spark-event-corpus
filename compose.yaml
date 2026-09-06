@@ -17,6 +17,7 @@ services:
     depends_on: [spark-master]
     volumes:
       - ${EVENT_LOG_DIR}:/tmp/spark-events
+      - ${WORKLOAD_OUTPUT_DIR}:/tmp/spark-workload-output
     deploy:
       resources:
         limits:
@@ -28,6 +29,7 @@ services:
     depends_on: [spark-master]
     volumes:
       - ${EVENT_LOG_DIR}:/tmp/spark-events
+      - ${WORKLOAD_OUTPUT_DIR}:/tmp/spark-workload-output
     deploy:
       resources:
         limits:
@@ -39,6 +41,7 @@ services:
     volumes:
       - ./workload:/workload:ro
       - ${EVENT_LOG_DIR}:/tmp/spark-events
+      - ${WORKLOAD_OUTPUT_DIR}:/tmp/spark-workload-output
     entrypoint: ["/opt/spark/bin/spark-submit"]
     command: >
       --master spark://spark-master:7077
@@ -56,4 +59,4 @@ services:
       --skew ${SKEW}
       --persist-mode ${PERSIST_MODE}
       --table-format ${TABLE_FORMAT}
-      --output-path /tmp/spark-output
+      --output-path /tmp/spark-workload-output/data

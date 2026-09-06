@@ -30,8 +30,8 @@ CATALOG_PATH = REPO_ROOT / "index.json"
 GENERATION_TAG = current_generation_tag()
 
 
-def run_one(run: Run, event_log_dir: Path) -> Path:
-    env = {**os.environ, **env_for_run(run, event_log_dir)}
+def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
+    env = {**os.environ, **env_for_run(run, event_log_dir), "WORKLOAD_OUTPUT_DIR": str(workload_output_dir)}
     subprocess.run(
         ["docker", "compose", "up", "-d", "spark-master", "spark-worker-1", "spark-worker-2"],
         cwd=REPO_ROOT, env=env, check=True,
@@ -100,8 +100,17 @@ def main() -> None:
         # FileNotFoundException: ... (Permission denied) on the event-log
         # file (confirmed in Task 8's manual verification).
         run_dir.chmod(0o777)
+        # Iceberg's warehouse and the workload's --output-path both need to be
+        # readable/writable from the driver (spark-submit) and the worker
+        # containers alike -- Delta's post-commit step schedules a
+        # distributed re-read of a _delta_log file the driver just wrote
+        # locally, which fails unless this is a shared mount (see compose.yaml).
+        # Nested under run_dir so it stays out of the event-log glob below.
+        workload_output_dir = run_dir / "workload-output"
+        workload_output_dir.mkdir(parents=True, exist_ok=True)
+        workload_output_dir.chmod(0o777)
         try:
-            log_file = run_one(run, run_dir)
+            log_file = run_one(run, run_dir, workload_output_dir)
             commit_run(run, log_file)
         except UnknownTableFormatMapping as exc:
             print(f"SKIPPED: {run.id}: no upstream table-format artifact available yet ({exc})")

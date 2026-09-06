@@ -38,7 +38,7 @@ def test_extra_confs_for_iceberg_configures_extension_and_catalog():
         "--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions "
         "--conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog "
         "--conf spark.sql.catalog.local.type=hadoop "
-        "--conf spark.sql.catalog.local.warehouse=/tmp/iceberg-warehouse"
+        "--conf spark.sql.catalog.local.warehouse=/tmp/spark-workload-output/iceberg-warehouse"
     )
 
 
