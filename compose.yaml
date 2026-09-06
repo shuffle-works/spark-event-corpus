@@ -1,0 +1,57 @@
+services:
+  spark-master:
+    image: "apache/spark:${SPARK_VERSION}"
+    # start-master.sh backgrounds the JVM via spark-daemon.sh and returns
+    # immediately, which exits the container; invoke spark-class directly so
+    # the Master JVM is PID 1 and stays in the foreground.
+    entrypoint: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master", "--host", "spark-master"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${EVENT_LOG_DIR}:/tmp/spark-events
+
+  spark-worker-1:
+    image: "apache/spark:${SPARK_VERSION}"
+    # See spark-master: start-worker.sh backgrounds via spark-daemon.sh too.
+    entrypoint: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
+    depends_on: [spark-master]
+    volumes:
+      - ${EVENT_LOG_DIR}:/tmp/spark-events
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+
+  spark-worker-2:
+    image: "apache/spark:${SPARK_VERSION}"
+    entrypoint: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
+    depends_on: [spark-master]
+    volumes:
+      - ${EVENT_LOG_DIR}:/tmp/spark-events
+    deploy:
+      resources:
+        limits:
+          cpus: "${WORKER_2_CPU_LIMIT}"
+
+  spark-submit:
+    image: "apache/spark:${SPARK_VERSION}"
+    depends_on: [spark-master, spark-worker-1, spark-worker-2]
+    volumes:
+      - ./workload:/workload:ro
+      - ${EVENT_LOG_DIR}:/tmp/spark-events
+    entrypoint: ["/opt/spark/bin/spark-submit"]
+    command: >
+      --master spark://spark-master:7077
+      --conf spark.eventLog.enabled=true
+      --conf spark.eventLog.dir=/tmp/spark-events
+      --conf spark.sql.adaptive.enabled=${AQE}
+      --conf spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}
+      --conf spark.dynamicAllocation.enabled=${DYNAMIC_ALLOCATION}
+      --conf spark.speculation=${SPECULATION}
+      ${PACKAGES_FLAG}
+      /workload/generate_events.py
+      --row-count ${ROW_COUNT}
+      --skew ${SKEW}
+      --persist-mode ${PERSIST_MODE}
+      --table-format ${TABLE_FORMAT}
+      --output-path /tmp/spark-output
