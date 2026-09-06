@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from urllib.request import urlopen
 
-SPARK_DIST_URL = "https://archive.apache.org/dist/spark/"
+SPARK_DIST_URL = "https://downloads.apache.org/spark/"
 VERSION_DIR_RE = re.compile(r'href="spark-(\d+)\.(\d+)\.(\d+)/"')
 
 

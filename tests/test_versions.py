@@ -5,6 +5,7 @@ from corpus.versions import (
     VersionResolutionError,
     parse_versions,
     latest_patch_per_minor,
+    SPARK_DIST_URL,
 )
 
 SAMPLE_LISTING = """
@@ -37,3 +38,9 @@ def test_latest_patch_per_minor_picks_highest_patch():
     assert SparkVersion(3, 5, 1) not in latest
     assert SparkVersion(4, 1, 2) in latest
     assert len(latest) == 3
+
+
+def test_spark_dist_url_uses_live_mirror():
+    """Regression test: ensure SPARK_DIST_URL points to live releases, not archived history."""
+    assert "archive.apache.org" not in SPARK_DIST_URL
+    assert SPARK_DIST_URL == "https://downloads.apache.org/spark/"
