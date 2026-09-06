@@ -15,14 +15,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from corpus.catalog import append_entry, sha256_of
-from corpus.tagging import current_generation_tag
+from corpus.tagging import generation_tag_for
 from corpus.validate import InvalidEventLog, validate_ndjson_event_log
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
 CATALOG_PATH = REPO_ROOT / "index.json"
 EXTERNAL_LOG_DIR = DATA_REPO / "logs" / "external"
-GENERATION_TAG = current_generation_tag()
+# See run_generation.py: derived from the catalog so a restart stays on the
+# one tag the data repo actually gets.
+GENERATION_TAG = generation_tag_for(CATALOG_PATH)
 
 SOURCES = [
     {

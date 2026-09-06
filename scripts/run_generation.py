@@ -20,14 +20,17 @@ from corpus.catalog import append_entry, load_catalog, sha256_of
 from corpus.matrix import Run, baseline_runs, pairwise_runs
 from corpus.orchestration import env_for_run
 from corpus.table_formats import UnknownTableFormatMapping
-from corpus.tagging import current_generation_tag
+from corpus.tagging import generation_tag_for
 from corpus.validate import validate_ndjson_event_log
 from corpus.versions import resolve_versions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
 CATALOG_PATH = REPO_ROOT / "index.json"
-GENERATION_TAG = current_generation_tag()
+# Derived from the catalog, not from today's date: this invocation may be the
+# Nth restart of a generation run that started on an earlier day, and every
+# entry from one run has to carry the single tag the data repo gets by hand.
+GENERATION_TAG = generation_tag_for(CATALOG_PATH)
 
 
 def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
