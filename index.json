@@ -385,6 +385,16 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-3.5.9-parquet-baseline",
     "path": "logs/spark-3.5.9-parquet-baseline.ndjson",
@@ -407,6 +417,16 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-3.5.9-delta-baseline",
     "path": "logs/spark-3.5.9-delta-baseline.ndjson",
@@ -429,6 +449,16 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-3.5.9-iceberg-baseline",
     "path": "logs/spark-3.5.9-iceberg-baseline.ndjson",
@@ -451,6 +481,17 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.0.4-parquet-baseline",
     "path": "logs/spark-4.0.4-parquet-baseline.ndjson",
@@ -473,6 +514,16 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.0.4-delta-baseline",
     "path": "logs/spark-4.0.4-delta-baseline.ndjson",
@@ -495,6 +546,16 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.0.4-iceberg-baseline",
     "path": "logs/spark-4.0.4-iceberg-baseline.ndjson",
@@ -517,6 +578,16 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "PLAN",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.1.3-parquet-baseline",
     "path": "logs/spark-4.1.3-parquet-baseline.ndjson",
@@ -539,6 +610,13 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.1.3-delta-baseline",
     "path": "logs/spark-4.1.3-delta-baseline.ndjson",
@@ -561,6 +639,14 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.1.3-iceberg-baseline",
     "path": "logs/spark-4.1.3-iceberg-baseline.ndjson",
@@ -583,6 +669,14 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.2.0-parquet-baseline",
     "path": "logs/spark-4.2.0-parquet-baseline.ndjson",
@@ -605,6 +699,13 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "spark-4.2.0-delta-baseline",
     "path": "logs/spark-4.2.0-delta-baseline.ndjson",
@@ -627,6 +728,16 @@
       "speculation": true
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-01",
     "path": "logs/pairwise-01.ndjson",
@@ -656,6 +767,14 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "MEM",
+      "PLAN",
+      "TINY"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-02",
     "path": "logs/pairwise-02.ndjson",
@@ -686,6 +805,15 @@
       "speculation": true
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-03",
     "path": "logs/pairwise-03.ndjson",
@@ -716,6 +844,15 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-04",
     "path": "logs/pairwise-04.ndjson",
@@ -747,6 +884,15 @@
       "speculation": true
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-05",
     "path": "logs/pairwise-05.ndjson",
@@ -776,6 +922,15 @@
       "speculation": false
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-06",
     "path": "logs/pairwise-06.ndjson",
@@ -806,6 +961,13 @@
       "speculation": true
     },
     "data_repo_tag": "v2026-09-06",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "TINY"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-09-06",
     "id": "pairwise-07",
     "path": "logs/pairwise-07.ndjson",

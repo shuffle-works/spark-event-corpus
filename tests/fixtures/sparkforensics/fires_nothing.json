@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 3,
+  "findings": [],
+  "cleanChecks": [
+    {"type": "skew", "tag": "SKEW"}
+  ]
+}

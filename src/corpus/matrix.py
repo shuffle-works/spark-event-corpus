@@ -9,7 +9,8 @@ regenerating this whole table: L8 only covers 7 two-level factors, so an
 eighth would silently stop being pairwise-covered.
 
 Each row also carries the detector tags it is meant to make fire, so a
-regenerated corpus can be checked for signal rather than just for having run.
+regenerated corpus can be checked for signal rather than just for having run:
+scripts/verify_detectors.py records the tags that actually fire next to these.
 """
 from __future__ import annotations
 

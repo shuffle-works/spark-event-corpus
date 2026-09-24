@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "findings": [
+    {"id": "f1", "type": "skew", "tag": "SKEW"},
+    {"id": "f2", "type": "straggler", "tag": "STRAG"},
+    {"id": "f3", "type": "skew", "tag": "SKEW"}
+  ],
+  "cleanChecks": [
+    {"type": "speculationWaste", "tag": "SPEC"},
+    {"type": "slowHost", "tag": "HOST"}
+  ]
+}
