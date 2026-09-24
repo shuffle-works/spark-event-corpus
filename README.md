@@ -29,7 +29,7 @@ that produced it, the detector tags it is meant to make fire
   there by hand once generation finishes, and every catalog entry's
   `data_repo_tag` refers to that tag.
 
-Both scripts are meant to be run by hand, not in CI.
+All scripts under `scripts/` are meant to be run by hand, not in CI.
 
 ## Setup
 
