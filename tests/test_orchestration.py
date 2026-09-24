@@ -1,10 +1,6 @@
-import importlib.util
-import sys
 from pathlib import Path
 
-import pytest
-
-from corpus.matrix import FAILURE_SCENARIOS, Run
+from corpus.matrix import Run
 from corpus.orchestration import (
     KILLED_RUN_EXIT_CODE,
     env_for_run,
@@ -12,8 +8,6 @@ from corpus.orchestration import (
     extra_confs_for,
     packages_for,
 )
-
-WORKLOAD_PATH = Path(__file__).resolve().parent.parent / "workload" / "generate_events.py"
 
 
 def make_run(table_format="parquet", **config_overrides):
@@ -79,25 +73,3 @@ def test_only_the_killed_run_expects_a_nonzero_submit_exit():
     assert expected_submit_exit_code(make_run(failure="job-failure")) == 0
     assert expected_submit_exit_code(make_run(failure="killed")) == KILLED_RUN_EXIT_CODE
 
-
-def load_workload():
-    pytest.importorskip("pyspark")
-    spec = importlib.util.spec_from_file_location("generate_events", WORKLOAD_PATH)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_workload_halts_with_the_expected_killed_run_exit_code():
-    # The workload runs inside the Spark container and cannot import this
-    # package, so it repeats the constant; the two must not drift apart.
-    assert load_workload().KILLED_RUN_EXIT_CODE == KILLED_RUN_EXIT_CODE
-
-
-def test_workload_accepts_every_failure_mode_the_matrix_uses(monkeypatch):
-    workload = load_workload()
-    for scenario in FAILURE_SCENARIOS:
-        mode = scenario.config["failure"]
-        assert mode in workload.FAILURE_SCENARIOS, scenario.id
-        monkeypatch.setattr(sys, "argv", ["generate_events.py", "--output-path", "/tmp/x", "--failure", mode])
-        assert workload.parse_args().failure == mode

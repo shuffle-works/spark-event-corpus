@@ -11,7 +11,8 @@ from .table_formats import artifact_for
 # What spark-submit exits with on the "killed" failure scenario: the workload
 # halts the driver JVM with this code (the same one a SIGKILL produces).
 # workload/generate_events.py cannot import this package, so it repeats the
-# value; tests/test_orchestration.py checks the two agree.
+# value; generation fails if the two drift, because run_generation.py checks
+# the exit code.
 KILLED_RUN_EXIT_CODE = 137
 
 
