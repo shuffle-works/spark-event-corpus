@@ -985,5 +985,141 @@
       "CACHE",
       "CSTOR"
     ]
+  },
+  {
+    "checksum": "sha256:5269b471dc53897c95f900db97b8f82242906131bc534041b88e30054a7e705e",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "failure": "task-retry",
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-09-24",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "RETRY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
+    "generated_at": "2026-09-24",
+    "id": "failure-task-retry",
+    "path": "logs/failure-task-retry.ndjson",
+    "scenario": "failure-task-retry",
+    "size_bytes": 153000,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": [
+      "RETRY"
+    ]
+  },
+  {
+    "checksum": "sha256:139ab4256d391a25d4efad41ff13d29b3e0d11709b6c885fd1b4e7f333725da2",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "failure": "stage-abort",
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-09-24",
+    "fires_detectors": [
+      "CFG",
+      "FAIL",
+      "GC",
+      "JOBS",
+      "MEM",
+      "RETRY",
+      "SFAIL",
+      "SKEW",
+      "STRAG",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
+    "generated_at": "2026-09-24",
+    "id": "failure-stage-abort",
+    "path": "logs/failure-stage-abort.ndjson",
+    "scenario": "failure-stage-abort",
+    "size_bytes": 300568,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": [
+      "FAIL",
+      "SFAIL"
+    ]
+  },
+  {
+    "checksum": "sha256:df367934bed27b614e22c3afc650b5de8ce9546fbe1e239d9178962b4b35a457",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "failure": "job-failure",
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-09-24",
+    "fires_detectors": [
+      "CFG",
+      "GC",
+      "JOBS",
+      "MEM",
+      "RETRY",
+      "SFAIL",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
+    "generated_at": "2026-09-24",
+    "id": "failure-job",
+    "path": "logs/failure-job.ndjson",
+    "scenario": "failure-job",
+    "size_bytes": 214062,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": [
+      "JOBS"
+    ]
+  },
+  {
+    "checksum": "sha256:b2d3f2469e399907c104893ee0dc67c5a659935942db2d844781fde62072b9f9",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "failure": "killed",
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-09-24",
+    "fires_detectors": [
+      "CFG",
+      "INCMP"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
+    "generated_at": "2026-09-24",
+    "id": "failure-killed-run",
+    "path": "logs/failure-killed-run.ndjson",
+    "scenario": "failure-killed-run",
+    "size_bytes": 105976,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": [
+      "INCMP"
+    ]
   }
 ]
