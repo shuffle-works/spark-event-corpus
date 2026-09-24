@@ -27,7 +27,7 @@ from corpus.validate import validate_ndjson_event_log
 from corpus.versions import resolve_versions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
+DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
 CATALOG_PATH = REPO_ROOT / "index.json"
 
 
@@ -80,9 +80,9 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
     return produced[0]
 
 
-def commit_run(run: Run, log_file: Path, data_repo: Path, tag: str) -> None:
+def commit_run(run: Run, log_file: Path, tag: str) -> None:
     validate_ndjson_event_log(log_file)
-    dest = data_repo / "logs" / f"{run.id}.ndjson"
+    dest = DATA_REPO / "logs" / f"{run.id}.ndjson"
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(log_file, dest)
     entry = {
@@ -105,10 +105,6 @@ def commit_run(run: Run, log_file: Path, data_repo: Path, tag: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--event-log-dir", type=Path, default=Path("/tmp/spark-event-corpus-runs"))
-    parser.add_argument(
-        "--data-repo", type=Path, default=DEFAULT_DATA_REPO,
-        help="spark-event-corpus-data clone to write logs into (default: sibling of this repo)",
-    )
     parser.add_argument(
         "--tag",
         help="data repo tag to stamp new entries with. Pass a fresh one when adding runs "
@@ -160,7 +156,7 @@ def main() -> None:
         workload_output_dir.chmod(0o777)
         try:
             log_file = run_one(run, run_dir, workload_output_dir)
-            commit_run(run, log_file, args.data_repo, tag)
+            commit_run(run, log_file, tag)
         except UnknownTableFormatMapping as exc:
             print(f"SKIPPED: {run.id}: no upstream table-format artifact available yet ({exc})")
             # run_dir (and the workload-output dir under it) were created

@@ -55,11 +55,10 @@ picks up where it left off. A restart also keeps stamping the tag the earlier
 invocation used rather than a fresh date-based one, so entries from a single
 generation run stay on one tag even if it spans days.
 
-`--data-repo` points it at a clone other than the sibling one. `--tag` sets
-the data repo tag new entries are stamped with. Without it, new entries reuse
-the tag the catalog's existing entries carry, which is right for a restart but
-wrong when adding runs to a corpus whose logs are already tagged: pass a fresh
-tag then, and pass the same one again on any restart.
+`--tag` sets the data repo tag new entries are stamped with. Without it, new
+entries reuse the tag the catalog's existing entries carry, which is right for
+a restart but wrong when adding runs to a corpus whose logs are already
+tagged: pass a fresh tag then, and pass the same one again on any restart.
 
 ### Expect 22 generated runs, not 23
 
