@@ -92,4 +92,5 @@ services:
       --skew ${SKEW}
       --persist-mode ${PERSIST_MODE}
       --table-format ${TABLE_FORMAT}
+      --failure ${FAILURE_MODE}
       --output-path /tmp/spark-workload-output/data

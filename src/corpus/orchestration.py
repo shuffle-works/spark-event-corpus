@@ -8,6 +8,23 @@ from pathlib import Path
 from .matrix import Run
 from .table_formats import artifact_for
 
+# What spark-submit exits with on the "killed" failure scenario: the workload
+# halts the driver JVM with this code (the same one a SIGKILL produces).
+# workload/generate_events.py cannot import this package, so it repeats the
+# value; tests/test_orchestration.py checks the two agree.
+KILLED_RUN_EXIT_CODE = 137
+
+
+def failure_mode_for(run: Run) -> str:
+    return run.config.get("failure", "none")
+
+
+def expected_submit_exit_code(run: Run) -> int:
+    """Every run's spark-submit exits 0 except the killed-run scenario, whose
+    driver is halted on purpose. The other failure scenarios catch the failure
+    they inject, so their driver still ends cleanly."""
+    return KILLED_RUN_EXIT_CODE if failure_mode_for(run) == "killed" else 0
+
 
 def packages_for(run: Run) -> str:
     if run.table_format == "parquet":
@@ -58,6 +75,7 @@ def env_for_run(
         "WORKER_2_CPU_LIMIT": "0.5" if run.config["slow_host"] else "2",
         "SKEW": run.config["skew"],
         "PERSIST_MODE": run.config["caching"],
+        "FAILURE_MODE": failure_mode_for(run),
         "TABLE_FORMAT": run.table_format,
         "ROW_COUNT": str(row_count),
         "PACKAGES_FLAG": packages_for(run),

@@ -1,4 +1,11 @@
-from corpus.matrix import baseline_runs, pairwise_runs, PAIRWISE_SCENARIOS, BASELINE_CONFIG
+from corpus.matrix import (
+    BASELINE_CONFIG,
+    FAILURE_SCENARIOS,
+    PAIRWISE_SCENARIOS,
+    baseline_runs,
+    failure_runs,
+    pairwise_runs,
+)
 
 EXPECTED_TAGS = {
     "SPEC", "HOST", "STRAG", "SKEW", "CACHE", "CSTOR",
@@ -35,3 +42,28 @@ def test_pairwise_runs_fills_in_latest_version():
     assert all(r.spark_version == "4.1.2" for r in runs)
     assert all(r.table_format == "parquet" for r in runs)
     assert len(runs) == 7
+
+
+def test_failure_scenarios_target_the_failure_detectors():
+    covered = {tag for s in FAILURE_SCENARIOS for tag in s.targets_detectors}
+    assert covered == {"RETRY", "FAIL", "SFAIL", "JOBS", "INCMP"}
+
+
+def test_failure_scenarios_are_baseline_plus_one_failure_mode():
+    modes = set()
+    for scenario in FAILURE_SCENARIOS:
+        config = dict(scenario.config)
+        modes.add(config.pop("failure"))
+        assert config == BASELINE_CONFIG
+    assert modes == {"task-retry", "stage-abort", "job-failure", "killed"}
+
+
+def test_failure_scenarios_stay_out_of_the_pairwise_matrix():
+    assert all("failure" not in s.config for s in PAIRWISE_SCENARIOS)
+    assert not {s.id for s in FAILURE_SCENARIOS} & {s.id for s in PAIRWISE_SCENARIOS}
+
+
+def test_failure_runs_fills_in_latest_version():
+    runs = failure_runs("4.2.0")
+    assert [r.id for r in runs] == [s.id for s in FAILURE_SCENARIOS]
+    assert all(r.spark_version == "4.2.0" and r.table_format == "parquet" for r in runs)
