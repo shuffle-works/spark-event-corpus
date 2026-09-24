@@ -10,7 +10,9 @@ workloads whose bottlenecks are known in advance.
 The generator lives here; the logs themselves live in a sibling data repo (see
 below). `index.json` is the catalog tying the two together: one entry per log,
 recording its id, path, checksum, source, and, for generated logs, the config
-that produced it plus the detector tags it is meant to make fire.
+that produced it, the detector tags it is meant to make fire
+(`targets_detectors`), and the tags that actually fire on it
+(`fires_detectors`, see [Check the detector tags](#check-the-detector-tags)).
 
 ## Prerequisites
 
@@ -22,12 +24,12 @@ that produced it plus the detector tags it is meant to make fire.
         spark-event-corpus/        # this repo: generator + catalog
         spark-event-corpus-data/   # the logs themselves
 
-  Both scripts write logs into `spark-event-corpus-data/logs/`. It has to be a
-  real clone, not just a directory, because the corpus is committed and tagged
-  there by hand once generation finishes, and every catalog entry's
-  `data_repo_tag` refers to that tag.
+  The generation scripts write logs into `spark-event-corpus-data/logs/`. It
+  has to be a real clone, not just a directory, because the corpus is
+  committed and tagged there by hand once generation finishes, and every
+  catalog entry's `data_repo_tag` refers to that tag.
 
-Both scripts are meant to be run by hand, not in CI.
+All scripts under `scripts/` are meant to be run by hand, not in CI.
 
 ## Setup
 
@@ -38,8 +40,8 @@ Both scripts are meant to be run by hand, not in CI.
 
     pytest
 
-Unit tests only. They cover the matrix, catalog, validation, and the
-compose/env contract, and need neither Docker nor network.
+Unit tests only. They cover the matrix, catalog, validation, the detector-tag
+check, and the compose/env contract, and need neither Docker, Node, nor network.
 
 ## Generate the corpus
 
@@ -64,6 +66,33 @@ table-format artifact available yet` and continues. An 18-of-19 count is the
 expected outcome, not a failure. It becomes 19 on its own once upstream
 Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
 `src/corpus/table_formats.py` gains a `4.2` to `iceberg` entry.
+
+## Check the detector tags
+
+    python3 scripts/verify_detectors.py [--data-repo <path>]
+
+Runs `sparkforensics-analyze <log> --format json` over every self-generated
+log, writes the tags of the findings it reports into each entry's
+`fires_detectors`, and stamps `fires_detectors_checked_with` with the exact CLI
+it used. The CLI is pinned (`SPARKFORENSICS_CLI_VERSION` in
+`src/corpus/detectors.py`) and fetched from npm through `npx`, so the only
+extra prerequisite is Node. `--data-repo` defaults to the sibling
+`spark-event-corpus-data` clone. Run it after generating, and again after
+bumping the pinned version, then commit the updated `index.json`.
+
+A tag counts as fired only when it appears in `findings`; tags listed under
+`cleanChecks` ran and found nothing. External logs have no targets and are
+skipped. Before analyzing, each log's checksum is compared with its catalog
+entry, so the observed tags always describe the cataloged log.
+
+Exit codes: `0` every targeted tag fired, `1` at least one targeted tag did
+not fire (each is printed as `MISSED`), `2` at least one log could not be
+checked (missing, checksum mismatch, or analyzer failure). `index.json` is
+rewritten either way.
+
+Against sparkforensics-cli 0.2.4 only 12 of the 48 targeted scenario and tag
+pairs fire, so the script currently exits `1`. The catalog records that as
+observed; the scenarios themselves are unchanged.
 
 ## The scenario matrix
 
