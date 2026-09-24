@@ -24,10 +24,10 @@ that produced it, the detector tags it is meant to make fire
         spark-event-corpus/        # this repo: generator + catalog
         spark-event-corpus-data/   # the logs themselves
 
-  Both scripts write logs into `spark-event-corpus-data/logs/`. It has to be a
-  real clone, not just a directory, because the corpus is committed and tagged
-  there by hand once generation finishes, and every catalog entry's
-  `data_repo_tag` refers to that tag.
+  The generation scripts write logs into `spark-event-corpus-data/logs/`. It
+  has to be a real clone, not just a directory, because the corpus is
+  committed and tagged there by hand once generation finishes, and every
+  catalog entry's `data_repo_tag` refers to that tag.
 
 All scripts under `scripts/` are meant to be run by hand, not in CI.
 
