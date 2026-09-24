@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Runs the full baseline + pairwise generation matrix end-to-end: resolve
+"""Runs the full baseline + pairwise generation matrix, plus the standalone
+failure scenarios, end-to-end: resolve
 versions -> run each baseline/scenario via Docker Compose -> validate the
 produced log -> copy it into the data repo -> append a catalog entry.
 Committing/tagging the data repo happens once, by hand, after this finishes
@@ -9,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -17,8 +19,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from corpus.catalog import append_entry, load_catalog, sha256_of
-from corpus.matrix import Run, baseline_runs, pairwise_runs
-from corpus.orchestration import env_for_run
+from corpus.matrix import Run, baseline_runs, failure_runs, pairwise_runs
+from corpus.orchestration import env_for_run, expected_submit_exit_code
 from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import generation_tag_for
 from corpus.validate import validate_ndjson_event_log
@@ -27,10 +29,6 @@ from corpus.versions import resolve_versions
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
 CATALOG_PATH = REPO_ROOT / "index.json"
-# Derived from the catalog, not from today's date: this invocation may be the
-# Nth restart of a generation run that started on an earlier day, and every
-# entry from one run has to carry the single tag the data repo gets by hand.
-GENERATION_TAG = generation_tag_for(CATALOG_PATH)
 
 
 def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
@@ -40,7 +38,17 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
         cwd=REPO_ROOT, env=env, check=True,
     )
     try:
-        subprocess.run(["docker", "compose", "run", "--rm", "spark-submit"], cwd=REPO_ROOT, env=env, check=True)
+        # The killed-run scenario halts its driver on purpose, so it has to
+        # exit with that code, not 0; anything else means it failed some
+        # other way.
+        expected_exit = expected_submit_exit_code(run)
+        submit = subprocess.run(
+            ["docker", "compose", "run", "--rm", "spark-submit"], cwd=REPO_ROOT, env=env
+        )
+        if submit.returncode != expected_exit:
+            raise RuntimeError(
+                f"{run.id}: spark-submit exited {submit.returncode}, expected {expected_exit}"
+            )
         # The apache/spark image runs as uid 185, so the event-log file it
         # writes into the EVENT_LOG_DIR bind mount comes out owned by uid/gid
         # 185, mode 660 -- unreadable by the host user that runs this script.
@@ -72,14 +80,14 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
     return produced[0]
 
 
-def commit_run(run: Run, log_file: Path) -> None:
+def commit_run(run: Run, log_file: Path, tag: str) -> None:
     validate_ndjson_event_log(log_file)
     dest = DATA_REPO / "logs" / f"{run.id}.ndjson"
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(log_file, dest)
     entry = {
         "id": run.id,
-        "data_repo_tag": GENERATION_TAG,
+        "data_repo_tag": tag,
         "path": f"logs/{dest.name}",
         "checksum": sha256_of(dest),
         "source": "self-generated",
@@ -88,7 +96,7 @@ def commit_run(run: Run, log_file: Path) -> None:
         "scenario": run.scenario,
         "config_diff": run.config,
         "targets_detectors": run.targets_detectors,
-        "generated_at": GENERATION_TAG[1:],
+        "generated_at": tag[1:],
         "size_bytes": dest.stat().st_size,
     }
     append_entry(CATALOG_PATH, entry)
@@ -97,12 +105,26 @@ def commit_run(run: Run, log_file: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--event-log-dir", type=Path, default=Path("/tmp/spark-event-corpus-runs"))
+    parser.add_argument(
+        "--tag",
+        help="data repo tag to stamp new entries with. Pass a fresh one when adding runs "
+        "to a catalog whose existing logs are already tagged (default: the tag the "
+        "catalog's entries already use, or today's date for an empty catalog)",
+    )
     args = parser.parse_args()
+    # generated_at is derived from the tag, so it has to be a dated one.
+    if args.tag and not re.fullmatch(r"v\d{4}-\d{2}-\d{2}", args.tag):
+        parser.error(f"--tag must look like v2026-09-24, got {args.tag!r}")
     args.event_log_dir.mkdir(parents=True, exist_ok=True)
+    # Derived from the catalog, not from today's date: this invocation may be
+    # the Nth restart of a generation run that started on an earlier day, and
+    # every entry from one run has to carry the single tag the data repo gets
+    # by hand.
+    tag = args.tag or generation_tag_for(CATALOG_PATH)
 
     versions = [str(v) for v in resolve_versions()]
     latest = versions[-1]
-    runs: list[Run] = baseline_runs(versions) + pairwise_runs(latest)
+    runs: list[Run] = baseline_runs(versions) + pairwise_runs(latest) + failure_runs(latest)
 
     # Restarts must not re-attempt runs a prior invocation already finished
     # and cataloged: append_entry() raises ValueError on a duplicate id,
@@ -134,7 +156,7 @@ def main() -> None:
         workload_output_dir.chmod(0o777)
         try:
             log_file = run_one(run, run_dir, workload_output_dir)
-            commit_run(run, log_file)
+            commit_run(run, log_file, tag)
         except UnknownTableFormatMapping as exc:
             print(f"SKIPPED: {run.id}: no upstream table-format artifact available yet ({exc})")
             # run_dir (and the workload-output dir under it) were created

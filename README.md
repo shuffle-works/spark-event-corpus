@@ -55,16 +55,21 @@ picks up where it left off. A restart also keeps stamping the tag the earlier
 invocation used rather than a fresh date-based one, so entries from a single
 generation run stay on one tag even if it spans days.
 
-### Expect 18 generated runs, not 19
+`--tag` sets the data repo tag new entries are stamped with. Without it, new
+entries reuse the tag the catalog's existing entries carry, which is right for
+a restart but wrong when adding runs to a corpus whose logs are already
+tagged: pass a fresh tag then, and pass the same one again on any restart.
+
+### Expect 22 generated runs, not 23
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
-three table formats = 12 baselines, plus 7 pairwise scenario runs on the
-latest version = 19. One of those, **Spark 4.2 + Iceberg, is deliberately
-skipped**: Iceberg has not published a Spark 4.2 runtime artifact yet, so
-there is nothing to run against. The script prints `SKIPPED: ... no upstream
-table-format artifact available yet` and continues. An 18-of-19 count is the
-expected outcome, not a failure. It becomes 19 on its own once upstream
-Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
+three table formats = 12 baselines, plus 7 pairwise scenario runs and 4
+failure scenario runs on the latest version = 23. One of those, **Spark 4.2 +
+Iceberg, is deliberately skipped**: Iceberg has not published a Spark 4.2
+runtime artifact yet, so there is nothing to run against. The script prints
+`SKIPPED: ... no upstream table-format artifact available yet` and continues.
+A 22-of-23 count is the expected outcome, not a failure. It becomes 23 on its
+own once upstream Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
 `src/corpus/table_formats.py` gains a `4.2` to `iceberg` entry.
 
 ## Check the detector tags
@@ -83,16 +88,20 @@ bumping the pinned version, then commit the updated `index.json`.
 A tag counts as fired only when it appears in `findings`; tags listed under
 `cleanChecks` ran and found nothing. External logs have no targets and are
 skipped. Before analyzing, each log's checksum is compared with its catalog
-entry, so the observed tags always describe the cataloged log.
+entry, so the observed tags always describe the cataloged log. The analyzer
+exits `3` ("inconclusive") on every log without an application-end event,
+such as `failure-killed-run`, but still prints its full report, so that exit
+counts as a successful analysis.
 
 Exit codes: `0` every targeted tag fired, `1` at least one targeted tag did
 not fire (each is printed as `MISSED`), `2` at least one log could not be
 checked (missing, checksum mismatch, or analyzer failure). `index.json` is
 rewritten either way.
 
-Against sparkforensics-cli 0.2.4 only 12 of the 48 targeted scenario and tag
-pairs fire, so the script currently exits `1`. The catalog records that as
-observed; the scenarios themselves are unchanged.
+Against sparkforensics-cli 0.2.4 only 17 of the 53 targeted scenario and tag
+pairs fire, so the script currently exits `1`. All 5 failure scenario targets
+fire; the misses are all on the pairwise runs. The catalog records that as
+observed; the pairwise scenarios themselves are unchanged.
 
 ## The scenario matrix
 
@@ -118,3 +127,24 @@ Two details are load-bearing and easy to undo by accident, so
   quota, so a "slow" host would merely be handed fewer tasks while running
   each one at full speed, giving the host and straggler detectors no per-task
   slowdown to see.
+
+## The failure scenarios
+
+Four more runs sit outside the pairwise matrix, so they leave it untouched.
+Each is the baseline config plus one `failure` mode, which replaces the join
+workload with a small job that fails on purpose (`FAILURE_SCENARIOS` in
+`src/corpus/matrix.py`, implemented in `workload/generate_events.py`):
+
+| Run | What happens | Targets |
+|---|---|---|
+| `failure-task-retry` | every task fails its first attempt and succeeds on the retry | `RETRY` |
+| `failure-stage-abort` | 4 of a stage's 20 tasks fail on every attempt, aborting the stage | `FAIL`, `SFAIL` |
+| `failure-job` | one job of three fails; the driver catches it and ends cleanly | `JOBS` |
+| `failure-killed-run` | the driver JVM halts after one job, so the log has no application-end event | `INCMP` |
+
+Which attempts fail depends only on the partition index and the task attempt
+number, never on timing, so every run fails the same way. The workload raises
+if an injected failure does not fail its job, and `run_generation.py` expects
+exit code 137 from the killed run and 0 from every other, so a scenario that
+stops failing as designed breaks generation instead of producing a quietly
+wrong log.

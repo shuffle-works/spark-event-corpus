@@ -27,6 +27,7 @@ from corpus.detectors import (
     CHECKED_WITH,
     AnalyzeError,
     Report,
+    check_analyzer_exit,
     exit_code,
     verify_entries,
 )
@@ -42,13 +43,10 @@ def analyze(log_path: Path) -> Report:
         "sparkforensics-analyze", str(log_path), "--format", "json",
     ]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True)
     except FileNotFoundError as exc:
         raise AnalyzeError("npx not found: install Node to run sparkforensics-cli") from exc
-    except subprocess.CalledProcessError as exc:
-        raise AnalyzeError(
-            f"sparkforensics-analyze exited {exc.returncode}: {exc.stderr.strip()}"
-        ) from exc
+    check_analyzer_exit(proc.returncode, proc.stderr)
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError as exc:

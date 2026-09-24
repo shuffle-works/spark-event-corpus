@@ -9,8 +9,10 @@ from corpus.detectors import (
     EXIT_OK,
     EXIT_TARGET_MISSED,
     EXIT_UNCHECKED,
+    AnalyzeError,
     CheckResult,
     InvalidReport,
+    check_analyzer_exit,
     exit_code,
     fired_tags,
     missing_targets,
@@ -142,3 +144,16 @@ def test_verify_entries_reports_analyzer_failure(tmp_path):
 
     assert results[0].error == "not JSON"
     assert "fires_detectors" not in entry
+
+
+@pytest.mark.parametrize("returncode", [0, 3])
+def test_check_analyzer_exit_accepts_a_printed_report(returncode):
+    # 3 is "inconclusive", which every incomplete log gets; the report is
+    # still printed in full.
+    check_analyzer_exit(returncode, "")
+
+
+@pytest.mark.parametrize("returncode", [1, 2, 127])
+def test_check_analyzer_exit_rejects_other_codes(returncode):
+    with pytest.raises(AnalyzeError, match=f"exited {returncode}: bad input"):
+        check_analyzer_exit(returncode, "bad input\n")

@@ -139,3 +139,51 @@ def pairwise_runs(latest_version: str) -> list[Run]:
         )
         for t in PAIRWISE_SCENARIOS
     ]
+
+
+# Standalone runs, outside the L8 array above: each is the baseline config
+# plus one "failure" mode that makes the workload fail on purpose, so the
+# failure detectors see logs a real cluster produced. The failures are keyed
+# on partition index and task attempt number, never on timing; see
+# workload/generate_events.py. A config without a "failure" key runs the
+# normal workload.
+FAILURE_SCENARIOS: list[ScenarioTemplate] = [
+    # Every task fails its first attempt and succeeds on the retry.
+    ScenarioTemplate(
+        id="failure-task-retry",
+        config={**BASELINE_CONFIG, "failure": "task-retry"},
+        targets_detectors=["RETRY"],
+    ),
+    # A few tasks of one stage fail on every attempt, aborting the stage.
+    ScenarioTemplate(
+        id="failure-stage-abort",
+        config={**BASELINE_CONFIG, "failure": "stage-abort"},
+        targets_detectors=["FAIL", "SFAIL"],
+    ),
+    # One job of three fails; the application carries on and ends cleanly.
+    ScenarioTemplate(
+        id="failure-job",
+        config={**BASELINE_CONFIG, "failure": "job-failure"},
+        targets_detectors=["JOBS"],
+    ),
+    # The driver JVM halts mid-run, so the log has no application-end event.
+    ScenarioTemplate(
+        id="failure-killed-run",
+        config={**BASELINE_CONFIG, "failure": "killed"},
+        targets_detectors=["INCMP"],
+    ),
+]
+
+
+def failure_runs(latest_version: str) -> list[Run]:
+    return [
+        Run(
+            id=t.id,
+            spark_version=latest_version,
+            table_format="parquet",
+            scenario=t.id,
+            config=t.config,
+            targets_detectors=t.targets_detectors,
+        )
+        for t in FAILURE_SCENARIOS
+    ]

@@ -1,7 +1,13 @@
 from pathlib import Path
 
 from corpus.matrix import Run
-from corpus.orchestration import packages_for, extra_confs_for, env_for_run
+from corpus.orchestration import (
+    KILLED_RUN_EXIT_CODE,
+    env_for_run,
+    expected_submit_exit_code,
+    extra_confs_for,
+    packages_for,
+)
 
 
 def make_run(table_format="parquet", **config_overrides):
@@ -53,3 +59,17 @@ def test_env_for_run_includes_both_bind_mount_dirs():
     env = env_for_run(make_run(), Path("/tmp/x"), Path("/tmp/y"))
     assert env["EVENT_LOG_DIR"] == "/tmp/x"
     assert env["WORKLOAD_OUTPUT_DIR"] == "/tmp/y"
+
+
+def test_env_for_run_defaults_failure_mode_to_none():
+    env = env_for_run(make_run(), Path("/tmp/x"), Path("/tmp/y"))
+    assert env["FAILURE_MODE"] == "none"
+    env2 = env_for_run(make_run(failure="stage-abort"), Path("/tmp/x"), Path("/tmp/y"))
+    assert env2["FAILURE_MODE"] == "stage-abort"
+
+
+def test_only_the_killed_run_expects_a_nonzero_submit_exit():
+    assert expected_submit_exit_code(make_run()) == 0
+    assert expected_submit_exit_code(make_run(failure="job-failure")) == 0
+    assert expected_submit_exit_code(make_run(failure="killed")) == KILLED_RUN_EXIT_CODE
+

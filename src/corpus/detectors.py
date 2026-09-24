@@ -24,6 +24,14 @@ EXIT_OK = 0
 EXIT_TARGET_MISSED = 1
 EXIT_UNCHECKED = 2
 
+# sparkforensics-analyze exits 3 when one of its checks is inconclusive, and
+# still prints the full report. An incomplete log always gets that exit, since
+# the run-complete check cannot pass without an application-end event, so it
+# is as good as 0 here. 1 (budget violated) cannot happen without budget flags,
+# and 2 is bad input.
+ANALYZER_EXIT_OK = 0
+ANALYZER_EXIT_INCONCLUSIVE = 3
+
 Report = dict[str, Any]
 Analyzer = Callable[[Path], Report]
 
@@ -41,6 +49,12 @@ class CheckResult:
     id: str
     missing: list[str] | None = None
     error: str | None = None
+
+
+def check_analyzer_exit(returncode: int, stderr: str) -> None:
+    """Raise unless the analyzer's exit code means it printed a full report."""
+    if returncode not in (ANALYZER_EXIT_OK, ANALYZER_EXIT_INCONCLUSIVE):
+        raise AnalyzeError(f"sparkforensics-analyze exited {returncode}: {stderr.strip()}")
 
 
 def fired_tags(report: Report) -> list[str]:
