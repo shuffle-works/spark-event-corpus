@@ -98,10 +98,12 @@ not fire (each is printed as `MISSED`), `2` at least one log could not be
 checked (missing, checksum mismatch, or analyzer failure). `index.json` is
 rewritten either way.
 
-Against sparkforensics-cli 0.2.4 only 17 of the 53 targeted scenario and tag
+Against sparkforensics-cli 0.2.4 only 17 of the 55 targeted scenario and tag
 pairs fire, so the script currently exits `1`. All 5 failure scenario targets
-fire; the misses are all on the pairwise runs. The catalog records that as
-observed; the pairwise scenarios themselves are unchanged.
+fire; the misses are on the pairwise runs and the two cache runs. The cache
+runs target `CSTOR` as rebuilt on `SparkListenerBlockUpdated` events, which
+0.2.4 predates. The catalog records that as observed; the scenarios
+themselves are unchanged.
 
 ## The scenario matrix
 

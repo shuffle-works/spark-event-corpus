@@ -18,13 +18,17 @@ KILLED_RUN_EXIT_CODE = 137
 # Spark confs for runs whose config sets storage_pressure (the cache
 # scenarios). Block updates are off in the event log by default, and without
 # them a log does not say which cached partitions ended up in memory, on disk,
-# or nowhere. The memory settings shrink unified memory until the persisted
-# fact table no longer fits, so caching partly fails; the parallelism splits
-# that table into enough partitions for "partly" to be measurable.
+# or nowhere. Compressed, the fact table caches into about 12 MB, which fits
+# even in shrunken memory, so compression is off (about 37 MB) and unified
+# memory drops to about 15 MB per executor: on Spark 4.2.0 that leaves 12 of
+# 20 partitions cached under MEMORY_ONLY and all 20 on disk under
+# MEMORY_AND_DISK. The parallelism splits the table into enough partitions
+# for a partial cache to be measurable.
 STORAGE_PRESSURE_CONFS = {
     "spark.eventLog.logBlockUpdates.enabled": "true",
-    "spark.memory.fraction": "0.1",
+    "spark.memory.fraction": "0.02",
     "spark.memory.storageFraction": "0.1",
+    "spark.sql.inMemoryColumnarStorage.compressed": "false",
     "spark.default.parallelism": "20",
 }
 

@@ -1121,5 +1121,76 @@
     "targets_detectors": [
       "INCMP"
     ]
+  },
+  {
+    "checksum": "sha256:e5d4c2641e165d7feb5147bae49e02182f92bffdd59202a4f6ee52afe173070f",
+    "config_diff": {
+      "aqe": true,
+      "caching": "memory-only",
+      "dynamic_allocation": true,
+      "second_action": "reread",
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false,
+      "storage_pressure": true
+    },
+    "data_repo_tag": "v2026-09-25",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
+    "generated_at": "2026-09-25",
+    "id": "cache-memory-only",
+    "path": "logs/cache-memory-only.ndjson",
+    "scenario": "cache-memory-only",
+    "size_bytes": 4477610,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": [
+      "CSTOR"
+    ]
+  },
+  {
+    "checksum": "sha256:152affd8f89175cea61fd12a4c569133a28e96d58f46b355c11e33f2cab04306",
+    "config_diff": {
+      "aqe": true,
+      "caching": "memory-and-disk",
+      "dynamic_allocation": true,
+      "second_action": "reread",
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false,
+      "storage_pressure": true
+    },
+    "data_repo_tag": "v2026-09-25",
+    "fires_detectors": [
+      "CFG",
+      "MEM",
+      "PLAN",
+      "SKEW",
+      "STRAG",
+      "TINY",
+      "UTIL"
+    ],
+    "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
+    "generated_at": "2026-09-25",
+    "id": "cache-memory-and-disk",
+    "path": "logs/cache-memory-and-disk.ndjson",
+    "scenario": "cache-memory-and-disk",
+    "size_bytes": 4237902,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": [
+      "CSTOR"
+    ]
   }
 ]
