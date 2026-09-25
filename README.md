@@ -64,9 +64,10 @@ tagged: pass a fresh tag then, and pass the same one again on any restart.
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
 three table formats = 12 baselines, plus 7 pairwise scenario runs, 4 failure
-scenario runs and 2 cache scenario runs on the latest version = 25. One of those, **Spark 4.2 +
-Iceberg, is deliberately skipped**: Iceberg has not published a Spark 4.2
-runtime artifact yet, so there is nothing to run against. The script prints
+scenario runs and 2 cache scenario runs on the latest version = 25. One of
+those, **Spark 4.2 + Iceberg, is deliberately skipped**: Iceberg has not
+published a Spark 4.2 runtime artifact yet, so there is nothing to run
+against. The script prints
 `SKIPPED: ... no upstream table-format artifact available yet` and continues.
 A 24-of-25 count is the expected outcome, not a failure. It becomes 25 on its
 own once upstream Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
