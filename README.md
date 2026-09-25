@@ -60,15 +60,15 @@ entries reuse the tag the catalog's existing entries carry, which is right for
 a restart but wrong when adding runs to a corpus whose logs are already
 tagged: pass a fresh tag then, and pass the same one again on any restart.
 
-### Expect 22 generated runs, not 23
+### Expect 24 generated runs, not 25
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
-three table formats = 12 baselines, plus 7 pairwise scenario runs and 4
-failure scenario runs on the latest version = 23. One of those, **Spark 4.2 +
+three table formats = 12 baselines, plus 7 pairwise scenario runs, 4 failure
+scenario runs and 2 cache scenario runs on the latest version = 25. One of those, **Spark 4.2 +
 Iceberg, is deliberately skipped**: Iceberg has not published a Spark 4.2
 runtime artifact yet, so there is nothing to run against. The script prints
 `SKIPPED: ... no upstream table-format artifact available yet` and continues.
-A 22-of-23 count is the expected outcome, not a failure. It becomes 23 on its
+A 24-of-25 count is the expected outcome, not a failure. It becomes 25 on its
 own once upstream Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
 `src/corpus/table_formats.py` gains a `4.2` to `iceberg` entry.
 
@@ -148,3 +148,21 @@ if an injected failure does not fail its job, and `run_generation.py` expects
 exit code 137 from the killed run and 0 from every other, so a scenario that
 stops failing as designed breaks generation instead of producing a quietly
 wrong log.
+
+## The cache scenarios
+
+Two more standalone runs give the cache-storage detector (`CSTOR`) logs that
+record where each cached partition was stored (`CACHE_SCENARIOS` in
+`src/corpus/matrix.py`). Each is the baseline config with the fact table
+persisted, read by a second action after the join (`--second-action reread`),
+under `storage_pressure`: the `STORAGE_PRESSURE_CONFS` in
+`src/corpus/orchestration.py` shrink unified memory so the table no longer
+fits, and set `spark.eventLog.logBlockUpdates.enabled=true`. Without that flag
+the log has no `SparkListenerBlockUpdated` events, and the cache fields of
+`RDD Info` that modern Spark writes are always 0, so no other log in the corpus
+says what was cached.
+
+| Run | Storage level | What happens |
+|---|---|---|
+| `cache-memory-only` | `MEMORY_ONLY` | partitions that do not fit are dropped, so only some stay cached |
+| `cache-memory-and-disk` | `MEMORY_AND_DISK` | partitions that do not fit are written to disk instead |

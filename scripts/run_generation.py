@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Runs the full baseline + pairwise generation matrix, plus the standalone
-failure scenarios, end-to-end: resolve
+failure and cache scenarios, end-to-end: resolve
 versions -> run each baseline/scenario via Docker Compose -> validate the
 produced log -> copy it into the data repo -> append a catalog entry.
 Committing/tagging the data repo happens once, by hand, after this finishes
@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from corpus.catalog import append_entry, load_catalog, sha256_of
-from corpus.matrix import Run, baseline_runs, failure_runs, pairwise_runs
+from corpus.matrix import Run, baseline_runs, cache_runs, failure_runs, pairwise_runs
 from corpus.orchestration import env_for_run, expected_submit_exit_code
 from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import generation_tag_for
@@ -124,7 +124,9 @@ def main() -> None:
 
     versions = [str(v) for v in resolve_versions()]
     latest = versions[-1]
-    runs: list[Run] = baseline_runs(versions) + pairwise_runs(latest) + failure_runs(latest)
+    runs: list[Run] = (
+        baseline_runs(versions) + pairwise_runs(latest) + failure_runs(latest) + cache_runs(latest)
+    )
 
     # Restarts must not re-attempt runs a prior invocation already finished
     # and cataloged: append_entry() raises ValueError on a duplicate id,

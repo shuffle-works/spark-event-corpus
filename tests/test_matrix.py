@@ -1,8 +1,10 @@
 from corpus.matrix import (
     BASELINE_CONFIG,
+    CACHE_SCENARIOS,
     FAILURE_SCENARIOS,
     PAIRWISE_SCENARIOS,
     baseline_runs,
+    cache_runs,
     failure_runs,
     pairwise_runs,
 )
@@ -66,4 +68,28 @@ def test_failure_scenarios_stay_out_of_the_pairwise_matrix():
 def test_failure_runs_fills_in_latest_version():
     runs = failure_runs("4.2.0")
     assert [r.id for r in runs] == [s.id for s in FAILURE_SCENARIOS]
+    assert all(r.spark_version == "4.2.0" and r.table_format == "parquet" for r in runs)
+
+
+def test_cache_scenarios_cover_both_persist_modes_under_storage_pressure():
+    modes = set()
+    for scenario in CACHE_SCENARIOS:
+        config = dict(scenario.config)
+        modes.add(config.pop("caching"))
+        assert config.pop("second_action") == "reread"
+        assert config.pop("storage_pressure") is True
+        assert config == {k: v for k, v in BASELINE_CONFIG.items() if k != "caching"}
+        assert scenario.targets_detectors == ["CSTOR"]
+    assert modes == {"memory-only", "memory-and-disk"}
+
+
+def test_cache_scenarios_stay_out_of_the_other_scenario_lists():
+    other_ids = {s.id for s in PAIRWISE_SCENARIOS + FAILURE_SCENARIOS}
+    assert not {s.id for s in CACHE_SCENARIOS} & other_ids
+    assert all("storage_pressure" not in s.config for s in PAIRWISE_SCENARIOS + FAILURE_SCENARIOS)
+
+
+def test_cache_runs_fills_in_latest_version():
+    runs = cache_runs("4.2.0")
+    assert [r.id for r in runs] == [s.id for s in CACHE_SCENARIOS]
     assert all(r.spark_version == "4.2.0" and r.table_format == "parquet" for r in runs)
