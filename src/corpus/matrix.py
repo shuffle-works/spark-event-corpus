@@ -106,13 +106,15 @@ CACHE_REUSE = {"fact_source": "parquet", "second_action": "count"}
 # cap the fact table fits whole, and under spark.memory.fraction=0.02 not one
 # partition does, so there is no partial cache to flag.
 CSTOR_FITS_WHOLE = (
-    "all 20 partitions of the persisted fact table stay cached ({size}), per block "
-    "updates; CSTOR needs some but under 90%"
+    "caching is all or nothing: all 20 of 20 partitions of the persisted fact table "
+    "stay cached ({size}), per block updates; CSTOR needs some but under 90% of "
+    "partitions cached"
 )
 CSTOR_FITS_NOTHING = (
-    "none of the 20 partitions of the persisted fact table is cached: at "
-    "spark.memory.fraction=0.02 each is larger than storage memory; CSTOR needs some "
-    "but under 90%"
+    "caching is all or nothing: none of the 20 partitions of the persisted fact table "
+    "is cached (no rdd_* block update at all), because at spark.memory.fraction=0.02 "
+    "each partition is larger than storage memory; CSTOR needs some but under 90% of "
+    "partitions cached"
 )
 
 
@@ -173,13 +175,19 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
             SPECULATION_CONFS,
             row_count=16_000_000, join_cardinality=4, worker_start_delay_s=COLD_START_DELAY_S,
         ),
-        targets_detectors=["PART", "TINY", "UTIL", "COLD", "STRAG"],
+        targets_detectors=["PART", "TINY", "UTIL", "COLD"],
         known_misses={
-            "SPEC": "no speculative attempt launched in this log; in other runs the "
-            "losers were the slow host's killed tail attempts, which were never written "
-            "because the application ends with that stage",
-            "HOST": "the slow host's executor completed no task: it registers late on "
-            "0.3 CPU, and its few tail tasks are lost as above",
+            "SPEC": "no speculative attempt launched in this log; in two earlier runs 6 "
+            "speculative copies won in the final 2000-task join stage, but the killed "
+            "original attempts have no TaskEnd event in the log at all, so even the fixed "
+            "parser has no loser to count (floor: 5 losers and 60 s in one stage)",
+            "HOST": "the slow host's executor completed no task in any stage (only the "
+            "two fast hosts ran tasks), so no per-host or per-executor slowdown is "
+            "visible; missed in all 3 runs of the final configuration",
+            "STRAG": "on its floor (more than 2.5% of a stage's tasks straggling, with "
+            "waste above 0.5% of the run): it fired in this log (20% of the first "
+            "20-task map stage straggled) but depends on the slow worker registering in "
+            "time for the first map stage, and missed in 1 of 7 earlier runs",
         },
     ),
     ScenarioTemplate(
@@ -209,11 +217,12 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
         ),
         targets_detectors=["SHFL", "SPILL", "UTIL", "COLD"],
         known_misses={
-            "SPEC": "one speculative attempt and no counted loser against a floor of 5 "
-            "losers and 60 s; with no slow host the only slow task is the hot key's",
-            "SKEW": "fires only from executor warm-up in the first map stage, never from "
-            "the hot key (1 of 200 join tasks, below P95): P95/median 3.05 there in this "
-            "log, fired in 1 of 3 runs",
+            "SPEC": "one speculative attempt and no counted loser in this log (one 0.5 s "
+            "loser in an earlier run), against a floor of 5 losers and 60 s; with no "
+            "slow host the only slow task is the hot key's",
+            "SKEW": "fires only from executor warm-up in the first 20-task map stage, "
+            "never from the hot key (1 of 200 join tasks, below P95); it did not fire on "
+            "this log and fired in 1 of 3 runs",
         },
     ),
     ScenarioTemplate(
@@ -242,9 +251,9 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
         ),
         targets_detectors=["SHFL", "SPILL", "PART", "TINY", "CACHE"],
         known_misses={
-            "SPEC": "no speculative attempt launched, in this log or in two earlier "
-            "runs: with no slow host and no skew, no task lags far enough behind the "
-            "stage's median to be copied",
+            "SPEC": "no speculative attempt launched in any of 3 runs: with no slow "
+            "host and no skew, no task lags far enough behind the stage's median to be "
+            "copied",
             "CSTOR": CSTOR_FITS_NOTHING,
         },
     ),
