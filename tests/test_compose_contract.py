@@ -39,9 +39,9 @@ def test_env_for_run_values_are_all_non_empty_strings():
     for key, value in env.items():
         assert isinstance(value, str), key
         # PACKAGES_FLAG/TABLE_FORMAT_CONF_FLAGS are legitimately empty for
-        # parquet, and STORAGE_CONF_FLAGS outside the cache scenarios; every
-        # other variable becoming empty would break the run.
-        if key not in {"PACKAGES_FLAG", "TABLE_FORMAT_CONF_FLAGS", "STORAGE_CONF_FLAGS"}:
+        # parquet, and SCENARIO_CONF_FLAGS outside the cache and pairwise
+        # scenarios; every other variable becoming empty would break the run.
+        if key not in {"PACKAGES_FLAG", "TABLE_FORMAT_CONF_FLAGS", "SCENARIO_CONF_FLAGS"}:
             assert value != "", key
 
 
@@ -71,9 +71,17 @@ def test_hard_won_conf_flags_are_still_present():
         assert flag in command_lines, flag
 
 
-def test_both_workers_advertise_an_explicit_core_count():
+def test_every_worker_advertises_an_explicit_core_count():
     """The slow-host axis works by throttling worker-2's CPU quota while it
-    still advertises the same task slots; left to auto-detect, the Worker JVM
-    would derive its cores from that quota and just take fewer tasks instead
-    of running them more slowly."""
-    assert COMPOSE_TEXT.count('"--cores", "2"') == 2
+    advertises a fixed number of task slots; left to auto-detect, the Worker
+    JVM would derive its cores from that quota and just take fewer tasks
+    instead of running them more slowly."""
+    worker_entrypoints = re.findall(r"exec /opt/spark/bin/spark-class org\.apache\.spark\.deploy\.worker\.Worker [^\"]*", COMPOSE_TEXT)
+    assert len(worker_entrypoints) == 3
+    assert [e.split("--cores ")[1] for e in worker_entrypoints] == ["2", "${WORKER_2_CORES}", "2"]
+
+
+def test_every_worker_waits_out_the_start_delay():
+    """COLD needs the first stage submitted with no executor alive, which the
+    cold-start rows get by holding every worker back."""
+    assert COMPOSE_TEXT.count('"sleep ${WORKER_START_DELAY}; exec ') == 3

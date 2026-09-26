@@ -20,21 +20,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from corpus.catalog import append_entry, load_catalog, sha256_of
 from corpus.matrix import Run, baseline_runs, cache_runs, failure_runs, pairwise_runs
-from corpus.orchestration import env_for_run, expected_submit_exit_code
+from corpus.orchestration import compose_services_for, env_for_run, expected_submit_exit_code
 from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import generation_tag_for
 from corpus.validate import validate_ndjson_event_log
 from corpus.versions import resolve_versions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
+DEFAULT_DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
 CATALOG_PATH = REPO_ROOT / "index.json"
 
 
 def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
     env = {**os.environ, **env_for_run(run, event_log_dir, workload_output_dir)}
     subprocess.run(
-        ["docker", "compose", "up", "-d", "spark-master", "spark-worker-1", "spark-worker-2"],
+        ["docker", "compose", "up", "-d", *compose_services_for(run)],
         cwd=REPO_ROOT, env=env, check=True,
     )
     try:
@@ -80,9 +80,9 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
     return produced[0]
 
 
-def commit_run(run: Run, log_file: Path, tag: str) -> None:
+def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
     validate_ndjson_event_log(log_file)
-    dest = DATA_REPO / "logs" / f"{run.id}.ndjson"
+    dest = data_repo / "logs" / f"{run.id}.ndjson"
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(log_file, dest)
     entry = {
@@ -96,6 +96,7 @@ def commit_run(run: Run, log_file: Path, tag: str) -> None:
         "scenario": run.scenario,
         "config_diff": run.config,
         "targets_detectors": run.targets_detectors,
+        **({"known_misses": run.known_misses} if run.known_misses else {}),
         "generated_at": tag[1:],
         "size_bytes": dest.stat().st_size,
     }
@@ -110,6 +111,10 @@ def main() -> None:
         help="data repo tag to stamp new entries with. Pass a fresh one when adding runs "
         "to a catalog whose existing logs are already tagged (default: the tag the "
         "catalog's entries already use, or today's date for an empty catalog)",
+    )
+    parser.add_argument(
+        "--data-repo", type=Path, default=DEFAULT_DATA_REPO,
+        help="spark-event-corpus-data clone to write the logs into (default: sibling of this repo)",
     )
     args = parser.parse_args()
     # generated_at is derived from the tag, so it has to be a dated one.
@@ -158,7 +163,7 @@ def main() -> None:
         workload_output_dir.chmod(0o777)
         try:
             log_file = run_one(run, run_dir, workload_output_dir)
-            commit_run(run, log_file, tag)
+            commit_run(run, log_file, tag, args.data_repo)
         except UnknownTableFormatMapping as exc:
             print(f"SKIPPED: {run.id}: no upstream table-format artifact available yet ({exc})")
             # run_dir (and the workload-output dir under it) were created

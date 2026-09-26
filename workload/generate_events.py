@@ -11,6 +11,12 @@ scenarios in src/corpus/matrix.py: the persisted fact table is read again by a
 second action after the join, so the storage detectors see a cached RDD reused
 across jobs.
 
+--payload-columns, --fact-source parquet and --second-action count exist for
+the pairwise scenarios, which scale the fact table until the detectors they
+target clear their floors: the extra columns add shuffle bytes, and reading
+the fact table back from Parquet and counting it after the join gives the
+caching detector a file-scan relation that two SQL executions read.
+
 --failure replaces the join workload with a small job that fails on purpose,
 for the failure scenarios in src/corpus/matrix.py. Which task attempts fail is
 decided by partition index and attempt number alone, so every run fails the
@@ -49,26 +55,42 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--join-tables", type=int, default=2)
     parser.add_argument("--join-cardinality", type=int, default=1000)
     parser.add_argument("--persist-mode", choices=["none", *PERSIST_LEVELS], default="none")
-    parser.add_argument("--second-action", choices=["none", "reread"], default="none")
+    parser.add_argument("--payload-columns", type=int, default=0)
+    parser.add_argument("--fact-source", choices=["range", "parquet"], default="range")
+    parser.add_argument("--second-action", choices=["none", "reread", "count"], default="none")
     parser.add_argument("--table-format", choices=["parquet", "delta", "iceberg"], default="parquet")
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--failure", choices=["none", *FAILURE_SCENARIOS], default="none")
     return parser.parse_args()
 
 
-def build_fact_df(spark: SparkSession, row_count: int, skew: str, key_cardinality: int):
+def build_fact_df(
+    spark: SparkSession, row_count: int, skew: str, key_cardinality: int, payload_columns: int
+):
     df = spark.range(row_count).withColumnRenamed("id", "row_id")
     if skew == "injected":
-        # 80% of rows collapse onto 1% of key values.
-        hot_keys = max(1, key_cardinality // 100)
+        # 80% of rows collapse onto one hot key, so a single join task holds
+        # most of the shuffle. Spread over several keys, the hot rows land in
+        # several partitions and no one partition or task stands out.
         df = df.withColumn(
             "join_key",
-            fn.when(fn.rand() < 0.8, (fn.rand() * hot_keys).cast("long"))
+            fn.when(fn.rand() < 0.8, fn.lit(0).cast("long"))
             .otherwise((fn.rand() * key_cardinality).cast("long")),
         )
     else:
         df = df.withColumn("join_key", (fn.rand() * key_cardinality).cast("long"))
+    # Random doubles do not compress, so each column adds about 8 bytes per
+    # row to every shuffle of the fact table.
+    for i in range(payload_columns):
+        df = df.withColumn(f"payload_{i}", fn.rand())
     return df
+
+
+def stage_as_parquet(spark: SparkSession, df, path: str):
+    """Writes df to Parquet and returns it read back, so later plans scan a
+    file relation instead of recomputing spark.range."""
+    df.write.mode("overwrite").parquet(path)
+    return spark.read.parquet(path)
 
 
 def build_dimension_df(spark: SparkSession, cardinality: int, suffix: str):
@@ -186,7 +208,11 @@ def main() -> None:
         spark.stop()
         return
 
-    fact_df = build_fact_df(spark, args.row_count, args.skew, args.join_cardinality)
+    fact_df = build_fact_df(
+        spark, args.row_count, args.skew, args.join_cardinality, args.payload_columns
+    )
+    if args.fact_source == "parquet":
+        fact_df = stage_as_parquet(spark, fact_df, f"{args.output_path}-fact-source")
     if args.persist_mode != "none":
         fact_df = fact_df.persist(PERSIST_LEVELS[args.persist_mode])
 
@@ -201,6 +227,10 @@ def main() -> None:
         # cached are read back, the rest are recomputed and offered to the
         # cache again.
         fact_df.groupBy("join_key").count().collect()
+    elif args.second_action == "count":
+        # A second SQL execution over the same fact table, with no shuffle of
+        # its own, so it adds a job without adding a 2000-task stage to the log.
+        fact_df.count()
     spark.stop()
 
 
