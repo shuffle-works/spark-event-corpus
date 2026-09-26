@@ -717,32 +717,51 @@
     "targets_detectors": []
   },
   {
-    "checksum": "sha256:8748587e9943cd8cb9a97e7c638ca5114a7e8a8d79050d92d6f0f6e2b29ab694",
+    "checksum": "sha256:9f238329e62a571ae592ad7b27f068dc4437bf9c7209edbd131d96e34c3bcb15",
     "config_diff": {
       "aqe": true,
       "caching": "memory-only",
       "dynamic_allocation": true,
+      "fact_source": "parquet",
+      "payload_columns": 0,
+      "row_count": 50000000,
+      "second_action": "count",
       "shuffle_partitions": 200,
       "skew": "injected",
       "slow_host": true,
-      "speculation": true
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.eventLog.logBlockUpdates.enabled": "true",
+        "spark.speculation.minTaskRuntime": "12s"
+      },
+      "speculation": true,
+      "third_worker": true
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
+      "CACHE",
       "CFG",
+      "GC",
+      "HOST",
       "MEM",
       "PLAN",
+      "SHFL",
       "SKEW",
+      "SPEC",
+      "SPILL",
       "STRAG",
       "TINY",
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-01",
+    "known_misses": {
+      "CSTOR": "all 20 partitions of the persisted fact table stay cached (59.5 MB), per block updates; CSTOR needs some but under 90%"
+    },
     "path": "logs/pairwise-01.ndjson",
     "scenario": "pairwise-01",
-    "size_bytes": 2309884,
+    "size_bytes": 3225285,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -751,35 +770,56 @@
       "HOST",
       "STRAG",
       "SKEW",
-      "CACHE",
-      "CSTOR"
+      "CACHE"
     ]
   },
   {
-    "checksum": "sha256:55d7c0eb966b35ab7f50798ad7c0e0df422da367cfb2957a6b8926d807f24edb",
+    "checksum": "sha256:e87de31735e69cdc2e7d00211ff08c511472b2cf749233fa414e5773cb30530a",
     "config_diff": {
       "aqe": true,
       "caching": "memory-only",
       "dynamic_allocation": false,
+      "fact_source": "parquet",
+      "payload_columns": 8,
+      "row_count": 10000000,
+      "second_action": "count",
       "shuffle_partitions": 2000,
       "skew": "injected",
       "slow_host": false,
-      "speculation": false
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.eventLog.logBlockUpdates.enabled": "true"
+      },
+      "speculation": false,
+      "third_worker": true,
+      "worker_start_delay_s": 45
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
+      "CACHE",
       "CFG",
+      "COLD",
       "GC",
+      "HOST",
       "MEM",
+      "PART",
       "PLAN",
-      "TINY"
+      "SHFL",
+      "SPILL",
+      "STRAG",
+      "TINY",
+      "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-02",
+    "known_misses": {
+      "CSTOR": "all 20 partitions of the persisted fact table stay cached (653 MB), per block updates; CSTOR needs some but under 90%",
+      "SKEW": "join stage P95/median of 2.5 against a floor of 3 (2.60 to 2.88 in earlier runs); the one hot key is a single task of 2000, below P95"
+    },
     "path": "logs/pairwise-02.ndjson",
     "scenario": "pairwise-02",
-    "size_bytes": 17362859,
+    "size_bytes": 18086641,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -788,37 +828,53 @@
       "TINY",
       "UTIL",
       "COLD",
-      "SKEW",
-      "CACHE",
-      "CSTOR"
+      "CACHE"
     ]
   },
   {
-    "checksum": "sha256:372ee4ab7b93584bb86923cbbcb0a4f5fbb01719e290ea0f9f63798c2c7637cc",
+    "checksum": "sha256:1072bdea4abb638da434cda87625315719683eeb976e0eb8c2f9662d559fa918",
     "config_diff": {
       "aqe": true,
       "caching": "none",
       "dynamic_allocation": false,
+      "join_cardinality": 4,
+      "payload_columns": 8,
+      "row_count": 16000000,
       "shuffle_partitions": 2000,
       "skew": "none",
       "slow_host": true,
-      "speculation": true
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.speculation.minTaskRuntime": "12s"
+      },
+      "speculation": true,
+      "third_worker": true,
+      "worker_start_delay_s": 45
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
       "CFG",
+      "COLD",
+      "GC",
       "MEM",
-      "PLAN",
+      "PART",
+      "SHFL",
       "SKEW",
+      "SPILL",
       "STRAG",
-      "TINY"
+      "TINY",
+      "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-03",
+    "known_misses": {
+      "HOST": "the slow host's executor completed no task: it registers late on 0.3 CPU, and its few tail tasks are lost as above",
+      "SPEC": "no speculative attempt launched in this log; in other runs the losers were the slow host's killed tail attempts, which were never written because the application ends with that stage"
+    },
     "path": "logs/pairwise-03.ndjson",
     "scenario": "pairwise-03",
-    "size_bytes": 16797675,
+    "size_bytes": 14884754,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -827,37 +883,55 @@
       "TINY",
       "UTIL",
       "COLD",
-      "SPEC",
-      "HOST",
       "STRAG"
     ]
   },
   {
-    "checksum": "sha256:053237b126783dd049011a522c4ab14ca0efa7bccb9580fd79ece5d9ed793180",
+    "checksum": "sha256:1eaf4f6548a94abb8df84c671462ba70accd165e2ad4955b2f99960a4e9fb3ef",
     "config_diff": {
       "aqe": false,
       "caching": "memory-only",
       "dynamic_allocation": false,
+      "fact_source": "parquet",
+      "payload_columns": 8,
+      "row_count": 10000000,
+      "second_action": "count",
       "shuffle_partitions": 200,
       "skew": "none",
       "slow_host": true,
-      "speculation": false
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.eventLog.logBlockUpdates.enabled": "true",
+        "spark.memory.fraction": "0.02"
+      },
+      "speculation": false,
+      "third_worker": true,
+      "worker_start_delay_s": 45
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
+      "CACHE",
       "CFG",
+      "COLD",
+      "GC",
+      "HOST",
       "MEM",
-      "PLAN",
+      "SHFL",
+      "SKEW",
+      "SPILL",
       "STRAG",
       "TINY",
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-04",
+    "known_misses": {
+      "CSTOR": "none of the 20 partitions of the persisted fact table is cached: at spark.memory.fraction=0.02 each is larger than storage memory; CSTOR needs some but under 90%"
+    },
     "path": "logs/pairwise-04.ndjson",
     "scenario": "pairwise-04",
-    "size_bytes": 2184624,
+    "size_bytes": 3001667,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -868,36 +942,53 @@
       "COLD",
       "HOST",
       "STRAG",
-      "CACHE",
-      "CSTOR"
+      "CACHE"
     ]
   },
   {
-    "checksum": "sha256:60af6f0ecde18124d1146776e9f0f42f0bfe3b6228e0101d742248e227a3bea8",
+    "checksum": "sha256:b19ad7768a5ff186305d3b1ffd047479f9c68794fb448c7ff0e4edebcf0e1875",
     "config_diff": {
       "aqe": false,
       "caching": "none",
       "dynamic_allocation": false,
+      "payload_columns": 8,
+      "row_count": 10000000,
       "shuffle_partitions": 200,
       "skew": "injected",
       "slow_host": false,
-      "speculation": true
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.memory.fraction": "0.02",
+        "spark.speculation.minTaskRuntime": "12s"
+      },
+      "speculation": true,
+      "third_worker": true,
+      "worker_start_delay_s": 45
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
       "CFG",
+      "COLD",
+      "GC",
+      "HOST",
       "MEM",
-      "PLAN",
-      "SKEW",
+      "PART",
+      "SHFL",
+      "SPILL",
       "STRAG",
-      "TINY"
+      "TINY",
+      "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-05",
+    "known_misses": {
+      "SKEW": "fires only from executor warm-up in the first map stage, never from the hot key (1 of 200 join tasks, below P95): P95/median 3.05 there in this log, fired in 1 of 3 runs",
+      "SPEC": "one speculative attempt and no counted loser against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's"
+    },
     "path": "logs/pairwise-05.ndjson",
     "scenario": "pairwise-05",
-    "size_bytes": 2416988,
+    "size_bytes": 2638990,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -905,37 +996,48 @@
       "SHFL",
       "SPILL",
       "UTIL",
-      "COLD",
-      "SPEC",
-      "SKEW"
+      "COLD"
     ]
   },
   {
-    "checksum": "sha256:3f3ab9c937de16662231fa8beca32c66ce3d9dd485fc622bde0c6d887faf0a05",
+    "checksum": "sha256:00a06dac55eae97e82bacea4e0ca04b72974777667dda096bbe4bda4a49d7818",
     "config_diff": {
       "aqe": false,
       "caching": "none",
       "dynamic_allocation": true,
+      "payload_columns": 8,
+      "row_count": 10000000,
       "shuffle_partitions": 2000,
       "skew": "injected",
       "slow_host": true,
-      "speculation": false
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.memory.fraction": "0.02"
+      },
+      "speculation": false,
+      "third_worker": true
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
       "CFG",
+      "GC",
+      "HOST",
       "MEM",
+      "PART",
       "PLAN",
+      "SHFL",
       "SKEW",
+      "SPILL",
       "STRAG",
-      "TINY"
+      "TINY",
+      "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-06",
     "path": "logs/pairwise-06.ndjson",
     "scenario": "pairwise-06",
-    "size_bytes": 16732090,
+    "size_bytes": 17394688,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -950,29 +1052,50 @@
     ]
   },
   {
-    "checksum": "sha256:45a7ca6a0d3d6a9157ce1c504988a728aa063c4979a9eb888d55054566f8bddb",
+    "checksum": "sha256:0a1f9f4558afbdeb3b150ace50581bdf83b0881cfbff820bd5653405a2ff650b",
     "config_diff": {
       "aqe": false,
       "caching": "memory-only",
       "dynamic_allocation": true,
+      "fact_source": "parquet",
+      "join_cardinality": 4,
+      "payload_columns": 8,
+      "row_count": 16000000,
+      "second_action": "count",
       "shuffle_partitions": 2000,
       "skew": "none",
       "slow_host": false,
-      "speculation": true
+      "spark_confs": {
+        "spark.default.parallelism": "20",
+        "spark.eventLog.logBlockUpdates.enabled": "true",
+        "spark.memory.fraction": "0.02",
+        "spark.speculation.minTaskRuntime": "12s"
+      },
+      "speculation": true,
+      "third_worker": true
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-09-26",
     "fires_detectors": [
+      "CACHE",
       "CFG",
+      "GC",
+      "HOST",
       "MEM",
-      "PLAN",
+      "PART",
+      "SHFL",
+      "SPILL",
       "TINY"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
+    "generated_at": "2026-09-26",
     "id": "pairwise-07",
+    "known_misses": {
+      "CSTOR": "none of the 20 partitions of the persisted fact table is cached: at spark.memory.fraction=0.02 each is larger than storage memory; CSTOR needs some but under 90%",
+      "SPEC": "no speculative attempt launched, in this log or in two earlier runs: with no slow host and no skew, no task lags far enough behind the stage's median to be copied"
+    },
     "path": "logs/pairwise-07.ndjson",
     "scenario": "pairwise-07",
-    "size_bytes": 16874636,
+    "size_bytes": 15123305,
     "source": "self-generated",
     "spark_version": "4.2.0",
     "table_format": "parquet",
@@ -981,9 +1104,7 @@
       "SPILL",
       "PART",
       "TINY",
-      "SPEC",
-      "CACHE",
-      "CSTOR"
+      "CACHE"
     ]
   },
   {
