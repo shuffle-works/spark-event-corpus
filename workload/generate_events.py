@@ -6,6 +6,11 @@ set by the caller via spark-submit --conf and need no script-side handling.
 Slow-host simulation is a Docker Compose worker CPU limit, not a script
 parameter either; see compose.yaml.
 
+--persist-mode memory-and-disk and --second-action reread exist for the cache
+scenarios in src/corpus/matrix.py: the persisted fact table is read again by a
+second action after the join, so the storage detectors see a cached RDD reused
+across jobs.
+
 --failure replaces the join workload with a small job that fails on purpose,
 for the failure scenarios in src/corpus/matrix.py. Which task attempts fail is
 decided by partition index and attempt number alone, so every run fails the
@@ -31,6 +36,11 @@ FAILED_ATTEMPT_SECONDS = 10
 # Must match KILLED_RUN_EXIT_CODE in src/corpus/orchestration.py.
 KILLED_RUN_EXIT_CODE = 137
 
+PERSIST_LEVELS = {
+    "memory-only": StorageLevel.MEMORY_ONLY,
+    "memory-and-disk": StorageLevel.MEMORY_AND_DISK,
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -38,7 +48,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skew", choices=["none", "injected"], default="none")
     parser.add_argument("--join-tables", type=int, default=2)
     parser.add_argument("--join-cardinality", type=int, default=1000)
-    parser.add_argument("--persist-mode", choices=["none", "memory-only"], default="none")
+    parser.add_argument("--persist-mode", choices=["none", *PERSIST_LEVELS], default="none")
+    parser.add_argument("--second-action", choices=["none", "reread"], default="none")
     parser.add_argument("--table-format", choices=["parquet", "delta", "iceberg"], default="parquet")
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--failure", choices=["none", *FAILURE_SCENARIOS], default="none")
@@ -176,8 +187,8 @@ def main() -> None:
         return
 
     fact_df = build_fact_df(spark, args.row_count, args.skew, args.join_cardinality)
-    if args.persist_mode == "memory-only":
-        fact_df = fact_df.persist(StorageLevel.MEMORY_ONLY)
+    if args.persist_mode != "none":
+        fact_df = fact_df.persist(PERSIST_LEVELS[args.persist_mode])
 
     result = fact_df
     for i in range(args.join_tables):
@@ -185,6 +196,11 @@ def main() -> None:
         result = result.join(dim_df, on="join_key", how="inner")
 
     write_output(result, args.table_format, args.output_path)
+    if args.second_action == "reread":
+        # A second job over the persisted fact table: partitions that were
+        # cached are read back, the rest are recomputed and offered to the
+        # cache again.
+        fact_df.groupBy("join_key").count().collect()
     spark.stop()
 
 

@@ -39,8 +39,9 @@ def test_env_for_run_values_are_all_non_empty_strings():
     for key, value in env.items():
         assert isinstance(value, str), key
         # PACKAGES_FLAG/TABLE_FORMAT_CONF_FLAGS are legitimately empty for
-        # parquet; every other variable becoming empty would break the run.
-        if key not in {"PACKAGES_FLAG", "TABLE_FORMAT_CONF_FLAGS"}:
+        # parquet, and STORAGE_CONF_FLAGS outside the cache scenarios; every
+        # other variable becoming empty would break the run.
+        if key not in {"PACKAGES_FLAG", "TABLE_FORMAT_CONF_FLAGS", "STORAGE_CONF_FLAGS"}:
             assert value != "", key
 
 

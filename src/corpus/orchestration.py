@@ -15,6 +15,23 @@ from .table_formats import artifact_for
 # the exit code.
 KILLED_RUN_EXIT_CODE = 137
 
+# Spark confs for runs whose config sets storage_pressure (the cache
+# scenarios). Block updates are off in the event log by default, and without
+# them a log does not say which cached partitions ended up in memory, on disk,
+# or nowhere. Compressed, the fact table caches into about 12 MB, which fits
+# even in shrunken memory, so compression is off (about 37 MB) and unified
+# memory drops to about 15 MB per executor: on Spark 4.2.0 that leaves 12 of
+# 20 partitions cached under MEMORY_ONLY and all 20 on disk under
+# MEMORY_AND_DISK. The parallelism splits the table into enough partitions
+# for a partial cache to be measurable.
+STORAGE_PRESSURE_CONFS = {
+    "spark.eventLog.logBlockUpdates.enabled": "true",
+    "spark.memory.fraction": "0.02",
+    "spark.memory.storageFraction": "0.1",
+    "spark.sql.inMemoryColumnarStorage.compressed": "false",
+    "spark.default.parallelism": "20",
+}
+
 
 def failure_mode_for(run: Run) -> str:
     return run.config.get("failure", "none")
@@ -25,6 +42,16 @@ def expected_submit_exit_code(run: Run) -> int:
     driver is halted on purpose. The other failure scenarios catch the failure
     they inject, so their driver still ends cleanly."""
     return KILLED_RUN_EXIT_CODE if failure_mode_for(run) == "killed" else 0
+
+
+def second_action_for(run: Run) -> str:
+    return run.config.get("second_action", "none")
+
+
+def storage_confs_for(run: Run) -> str:
+    if not run.config.get("storage_pressure", False):
+        return ""
+    return " ".join(f"--conf {key}={value}" for key, value in STORAGE_PRESSURE_CONFS.items())
 
 
 def packages_for(run: Run) -> str:
@@ -77,6 +104,8 @@ def env_for_run(
         "SKEW": run.config["skew"],
         "PERSIST_MODE": run.config["caching"],
         "FAILURE_MODE": failure_mode_for(run),
+        "SECOND_ACTION": second_action_for(run),
+        "STORAGE_CONF_FLAGS": storage_confs_for(run),
         "TABLE_FORMAT": run.table_format,
         "ROW_COUNT": str(row_count),
         "PACKAGES_FLAG": packages_for(run),

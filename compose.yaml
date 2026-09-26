@@ -87,10 +87,12 @@ services:
       --conf spark.sql.autoBroadcastJoinThreshold=-1
       ${PACKAGES_FLAG}
       ${TABLE_FORMAT_CONF_FLAGS}
+      ${STORAGE_CONF_FLAGS}
       /workload/generate_events.py
       --row-count ${ROW_COUNT}
       --skew ${SKEW}
       --persist-mode ${PERSIST_MODE}
       --table-format ${TABLE_FORMAT}
       --failure ${FAILURE_MODE}
+      --second-action ${SECOND_ACTION}
       --output-path /tmp/spark-workload-output/data

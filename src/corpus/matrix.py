@@ -187,3 +187,45 @@ def failure_runs(latest_version: str) -> list[Run]:
         )
         for t in FAILURE_SCENARIOS
     ]
+
+
+# Standalone runs, outside the L8 array above: the baseline config with the
+# fact table persisted, read again by a second action, and run under too
+# little storage memory to hold it, so caching partly fails. storage_pressure
+# also turns on block-update logging (see src/corpus/orchestration.py): the
+# cache detector reads what was stored where from SparkListenerBlockUpdated
+# events, which Spark only writes to the event log when asked to.
+CACHE_SCENARIOS: list[ScenarioTemplate] = [
+    # Partitions that do not fit are dropped, so only some stay cached.
+    ScenarioTemplate(
+        id="cache-memory-only",
+        config={
+            **BASELINE_CONFIG, "caching": "memory-only",
+            "second_action": "reread", "storage_pressure": True,
+        },
+        targets_detectors=["CSTOR"],
+    ),
+    # Partitions that do not fit in memory are written to disk instead.
+    ScenarioTemplate(
+        id="cache-memory-and-disk",
+        config={
+            **BASELINE_CONFIG, "caching": "memory-and-disk",
+            "second_action": "reread", "storage_pressure": True,
+        },
+        targets_detectors=["CSTOR"],
+    ),
+]
+
+
+def cache_runs(latest_version: str) -> list[Run]:
+    return [
+        Run(
+            id=t.id,
+            spark_version=latest_version,
+            table_format="parquet",
+            scenario=t.id,
+            config=t.config,
+            targets_detectors=t.targets_detectors,
+        )
+        for t in CACHE_SCENARIOS
+    ]

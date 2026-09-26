@@ -7,6 +7,7 @@ from corpus.orchestration import (
     expected_submit_exit_code,
     extra_confs_for,
     packages_for,
+    storage_confs_for,
 )
 
 
@@ -73,3 +74,21 @@ def test_only_the_killed_run_expects_a_nonzero_submit_exit():
     assert expected_submit_exit_code(make_run(failure="job-failure")) == 0
     assert expected_submit_exit_code(make_run(failure="killed")) == KILLED_RUN_EXIT_CODE
 
+
+
+def test_env_for_run_defaults_to_no_second_action_and_no_storage_confs():
+    env = env_for_run(make_run(), Path("/tmp/x"), Path("/tmp/y"))
+    assert env["SECOND_ACTION"] == "none"
+    assert env["STORAGE_CONF_FLAGS"] == ""
+
+
+def test_storage_pressure_logs_block_updates_and_shrinks_storage_memory():
+    run = make_run(caching="memory-and-disk", second_action="reread", storage_pressure=True)
+    flags = storage_confs_for(run)
+    assert "--conf spark.eventLog.logBlockUpdates.enabled=true" in flags
+    assert "--conf spark.memory.fraction=" in flags
+    assert "--conf spark.memory.storageFraction=" in flags
+    env = env_for_run(run, Path("/tmp/x"), Path("/tmp/y"))
+    assert env["STORAGE_CONF_FLAGS"] == flags
+    assert env["SECOND_ACTION"] == "reread"
+    assert env["PERSIST_MODE"] == "memory-and-disk"
