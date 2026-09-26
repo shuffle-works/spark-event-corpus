@@ -9,12 +9,16 @@ can't quietly drop one.
 """
 from pathlib import Path
 import re
+import shlex
+
+import yaml
 
 from corpus.matrix import Run
 from corpus.orchestration import env_for_run
 
 COMPOSE_PATH = Path(__file__).resolve().parent.parent / "compose.yaml"
 COMPOSE_TEXT = COMPOSE_PATH.read_text()
+COMPOSE_SERVICES = yaml.safe_load(COMPOSE_TEXT)["services"]
 
 
 def representative_run() -> Run:
@@ -39,9 +43,9 @@ def test_env_for_run_values_are_all_non_empty_strings():
     for key, value in env.items():
         assert isinstance(value, str), key
         # PACKAGES_FLAG/TABLE_FORMAT_CONF_FLAGS are legitimately empty for
-        # parquet, and STORAGE_CONF_FLAGS outside the cache scenarios; every
-        # other variable becoming empty would break the run.
-        if key not in {"PACKAGES_FLAG", "TABLE_FORMAT_CONF_FLAGS", "STORAGE_CONF_FLAGS"}:
+        # parquet, and SCENARIO_CONF_FLAGS outside the cache and pairwise
+        # scenarios; every other variable becoming empty would break the run.
+        if key not in {"PACKAGES_FLAG", "TABLE_FORMAT_CONF_FLAGS", "SCENARIO_CONF_FLAGS"}:
             assert value != "", key
 
 
@@ -71,9 +75,29 @@ def test_hard_won_conf_flags_are_still_present():
         assert flag in command_lines, flag
 
 
-def test_both_workers_advertise_an_explicit_core_count():
+WORKER_CORES = {"spark-worker-1": "2", "spark-worker-2": "${WORKER_2_CORES}", "spark-worker-3": "2"}
+
+
+def worker_shell_command(service: str) -> str:
+    entrypoint = COMPOSE_SERVICES[service]["entrypoint"]
+    assert entrypoint[:2] == ["/bin/sh", "-c"], service
+    assert len(entrypoint) == 3, service
+    return entrypoint[2]
+
+
+def test_every_worker_advertises_an_explicit_core_count():
     """The slow-host axis works by throttling worker-2's CPU quota while it
-    still advertises the same task slots; left to auto-detect, the Worker JVM
-    would derive its cores from that quota and just take fewer tasks instead
-    of running them more slowly."""
-    assert COMPOSE_TEXT.count('"--cores", "2"') == 2
+    advertises a fixed number of task slots; left to auto-detect, the Worker
+    JVM would derive its cores from that quota and just take fewer tasks
+    instead of running them more slowly."""
+    for service, cores in WORKER_CORES.items():
+        args = shlex.split(worker_shell_command(service).split("; exec ", 1)[1])
+        assert "org.apache.spark.deploy.worker.Worker" in args, service
+        assert args[args.index("--cores") + 1] == cores, service
+
+
+def test_every_worker_waits_out_the_start_delay():
+    """COLD needs the first stage submitted with no executor alive, which the
+    cold-start rows get by holding every worker back."""
+    for service in WORKER_CORES:
+        assert worker_shell_command(service).startswith("sleep ${WORKER_START_DELAY}; exec "), service

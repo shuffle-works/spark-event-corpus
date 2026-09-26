@@ -10,9 +10,10 @@ workloads whose bottlenecks are known in advance.
 The generator lives here; the logs themselves live in a sibling data repo (see
 below). `index.json` is the catalog tying the two together: one entry per log,
 recording its id, path, checksum, source, and, for generated logs, the config
-that produced it, the detector tags it is meant to make fire
-(`targets_detectors`), and the tags that actually fire on it
-(`fires_detectors`, see [Check the detector tags](#check-the-detector-tags)).
+that produced it, the detector tags it makes fire (`targets_detectors`), the
+tags it was designed for but does not reach, each with the measured reason
+(`known_misses`), and the tags that actually fire on it (`fires_detectors`,
+see [Check the detector tags](#check-the-detector-tags)).
 
 ## Prerequisites
 
@@ -60,6 +61,10 @@ entries reuse the tag the catalog's existing entries carry, which is right for
 a restart but wrong when adding runs to a corpus whose logs are already
 tagged: pass a fresh tag then, and pass the same one again on any restart.
 
+To regenerate some runs, delete their entries from `index.json` first; every
+other run is skipped as already done. `--data-repo` writes the logs into a
+different `spark-event-corpus-data` clone than the sibling one.
+
 ### Expect 24 generated runs, not 25
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
@@ -99,12 +104,12 @@ not fire (each is printed as `MISSED`), `2` at least one log could not be
 checked (missing, checksum mismatch, or analyzer failure). `index.json` is
 rewritten either way.
 
-Against sparkforensics-cli 0.2.4 only 17 of the 55 targeted scenario and tag
-pairs fire, so the script currently exits `1`. All 5 failure scenario targets
-fire; the misses are on the pairwise runs and the two cache runs. The cache
-runs target `CSTOR` as rebuilt on `SparkListenerBlockUpdated` events, which
-0.2.4 predates. The catalog records that as observed; the scenarios
-themselves are unchanged.
+Against sparkforensics-cli 0.2.4, 42 of the 44 targeted scenario and tag
+pairs fire, so the script currently exits `1`. Every pairwise and failure
+scenario target fires; the two misses are the cache runs, which target `CSTOR`
+as rebuilt on `SparkListenerBlockUpdated` events, which 0.2.4 predates. A tag
+listed under an entry's `known_misses` is not a target, so it never counts as
+missed.
 
 ## The scenario matrix
 
@@ -124,12 +129,71 @@ Two details are load-bearing and easy to undo by accident, so
   no shuffle at all, which in turn makes the shuffle-partitions axis inert and
   leaves the shuffle, spill, partitioning, and skew detectors with nothing to
   find.
-- **Both workers advertise the same core count** (`--cores 2`), and the
-  slow-host axis throttles worker-2's *CPU quota* instead. Left to
-  auto-detect, the Worker JVM reads its core count off the container's cgroup
-  quota, so a "slow" host would merely be handed fewer tasks while running
-  each one at full speed, giving the host and straggler detectors no per-task
-  slowdown to see.
+- **Every worker advertises an explicit core count** (`--cores`), and the
+  slow-host axis throttles worker-2's *CPU quota* instead: on a slow-host row
+  it takes 6 task slots on 0.3 CPU. Left to auto-detect, the Worker JVM reads
+  its core count off the container's cgroup quota, so a "slow" host would
+  merely be handed fewer tasks while running each one at full speed, giving
+  the host and straggler detectors no per-task slowdown to see.
+
+### Scaled to clear the detector floors
+
+The baseline workload is too small for most detector floors, so the pairwise
+rows scale it up, each knob for the floor it clears (`PAIRWISE_SCALE` and the
+rows in `src/corpus/matrix.py`):
+
+| Knob | Rows | Clears |
+|---|---|---|
+| a third worker, `spark-worker-3`, 2 CPU and 2 slots | all | `HOST` needs 3 hosts or executors |
+| worker-2 advertises 6 slots on 0.3 CPU | slow-host rows 01, 03, 04, 06 | `HOST` on short tasks; 6 speculated tail tasks for `SPEC` |
+| `spark.default.parallelism=20` | all | `HOST` needs a stage of 15 or more tasks |
+| 8 extra columns of `rand()` doubles | all but 01 | `SHFL`, `PART` |
+| 10M rows; 16M on 03 and 07; 50M narrow rows on 01 | per row | `SHFL`, `PART`; on 01 the hot task outlasts the speculated tail |
+| one hot key holding 80% of rows | skew rows 01, 02, 05, 06 | `PART`; `SPEC` on 01 |
+| 4 join keys instead of 1000 | skew-free 2000-partition rows 03, 07 | `PART` without injected skew |
+| workers sleep 45 s before starting | cold-start rows 02, 03, 04, 05 | `COLD` (first executor over 30 s after the first stage), `UTIL` |
+| `spark.memory.fraction=0.02` | spill rows 04, 05, 06, 07 | `SPILL` |
+| the fact table is written to Parquet, read back, and counted again after the join | caching rows 01, 02, 04, 07 | `CACHE` counts file-scan relations read by two or more SQL executions |
+| `spark.eventLog.logBlockUpdates.enabled=true` | caching rows 01, 02, 04, 07 | gives `CSTOR` the cached partitions to measure |
+| `spark.speculation.minTaskRuntime=12s` | speculation rows 01, 03, 05, 07 | `SPEC` needs its losers to add up to 60 s |
+
+The baselines, failure and cache scenarios keep the unscaled two-worker
+setup. The seven pairwise runs take about 500 s of wall clock and write about
+74 MB of logs.
+
+With three executors, `HOST` also fires on rows with no slow host (02, 05,
+07): a hot key or hot partition leaves one executor far above the median on
+shuffle bytes. It is not a target there.
+
+### Known misses
+
+37 of the 48 tags the rows were designed for fire on the committed logs as
+targets. The other 11 are recorded in the entry's `known_misses` with their
+measured reason, rather than tuned to clear a threshold by a hair: ten do not
+fire, and `STRAG` on 03 fires but not reliably. The figures below were
+measured with sparkforensics built from main at commit 3fbd34b, which counts
+killed speculative attempts that end after their stage (#71) and reads
+`CSTOR` from block updates (#75), and hold for 0.2.4 as well.
+
+| Row | Tag | Why |
+|---|---|---|
+| 01, 02 | `CSTOR` | caching is all or nothing: all 20 of 20 partitions of the persisted fact table stay cached (59.5 MB on 01, 653 MB on 02), per block updates; `CSTOR` needs some but under 90% cached |
+| 04, 07 | `CSTOR` | none of the 20 partitions is cached (no `rdd_*` block update at all): at `spark.memory.fraction=0.02` each partition is larger than storage memory |
+| 02 | `SKEW` | join stage P95/median of 2.5 to 2.88 against a floor of 3; the hot key is 1 task of 2000, below P95 |
+| 03 | `SPEC` | no speculative attempt launched in the final log; in two earlier runs 6 speculative copies won in the final 2000-task join stage, but the killed originals have no TaskEnd event in the log, so even the fixed parser has no loser to count (floor: 5 losers and 60 s in one stage) |
+| 03 | `HOST` | the slow host's executor completed no task in any stage (only the two fast hosts ran tasks), so no slowdown is visible; missed in all 3 runs |
+| 03 | `STRAG` | on its floor (over 2.5% of a stage's tasks straggling, waste over 0.5% of the run): fired in the final log (20% of the first 20-task map stage) but depends on the slow worker registering in time, and missed in 1 of 7 earlier runs |
+| 05 | `SPEC` | one speculative attempt and no counted loser in the final log (one 0.5 s loser in an earlier run), against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's |
+| 05 | `SKEW` | fires only from executor warm-up in the first 20-task map stage, never from the hot key (1 of 200 join tasks, below P95): not on the final log, 1 of 3 runs |
+| 07 | `SPEC` | no speculative attempt launched in any of 3 runs: with no slow host and no skew, no task lags far enough behind to be copied |
+
+Some fired targets are timing-dependent as well. Across three Docker runs of
+the final configuration, `SPEC` on 01, `HOST` on 04 (the slow executor did
+not register in one run) and `SKEW` on 06 each missed once, and pairwise-07
+once lost an executor to an out-of-memory error while merging its spill
+files. A regeneration can land on a different set, so rerun
+`scripts/verify_detectors.py` after one and update `targets_detectors` and
+`known_misses` to what the new logs show.
 
 ## The failure scenarios
 

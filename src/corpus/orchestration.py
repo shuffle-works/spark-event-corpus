@@ -15,6 +15,15 @@ from .table_formats import artifact_for
 # the exit code.
 KILLED_RUN_EXIT_CODE = 137
 
+# Fact table rows and join keys for runs whose config does not set row_count
+# or join_cardinality: every baseline, failure and cache run.
+DEFAULT_ROW_COUNT = 5_000_000
+DEFAULT_JOIN_CARDINALITY = 1000
+
+# Worker-2's CPU quota and task slots on slow_host runs; see env_for_run.
+SLOW_HOST_CPU_LIMIT = "0.3"
+SLOW_HOST_CORES = "6"
+
 # Spark confs for runs whose config sets storage_pressure (the cache
 # scenarios). Block updates are off in the event log by default, and without
 # them a log does not say which cached partitions ended up in memory, on disk,
@@ -48,10 +57,22 @@ def second_action_for(run: Run) -> str:
     return run.config.get("second_action", "none")
 
 
-def storage_confs_for(run: Run) -> str:
-    if not run.config.get("storage_pressure", False):
-        return ""
-    return " ".join(f"--conf {key}={value}" for key, value in STORAGE_PRESSURE_CONFS.items())
+def scenario_confs_for(run: Run) -> str:
+    """--conf flags a scenario adds on top of compose.yaml's fixed set: the
+    storage-pressure confs of the cache scenarios, then the row's own
+    spark_confs (the pairwise rows'). Empty for every other run."""
+    confs = dict(STORAGE_PRESSURE_CONFS) if run.config.get("storage_pressure", False) else {}
+    confs.update(run.config.get("spark_confs", {}))
+    return " ".join(f"--conf {key}={value}" for key, value in confs.items())
+
+
+def compose_services_for(run: Run) -> list[str]:
+    """The cluster services to bring up before spark-submit: two workers, or
+    three for runs whose config sets third_worker."""
+    services = ["spark-master", "spark-worker-1", "spark-worker-2"]
+    if run.config.get("third_worker", False):
+        services.append("spark-worker-3")
+    return services
 
 
 def packages_for(run: Run) -> str:
@@ -80,12 +101,7 @@ def extra_confs_for(run: Run) -> str:
     return ""
 
 
-def env_for_run(
-    run: Run,
-    event_log_dir: Path,
-    workload_output_dir: Path,
-    row_count: int = 5_000_000,
-) -> dict[str, str]:
+def env_for_run(run: Run, event_log_dir: Path, workload_output_dir: Path) -> dict[str, str]:
     """Every ${VAR} compose.yaml interpolates, in one dict. Callers should not
     need to graft extra keys on afterwards; tests/test_compose_contract.py
     asserts this stays exhaustive."""
@@ -95,19 +111,25 @@ def env_for_run(
         "SHUFFLE_PARTITIONS": str(run.config["shuffle_partitions"]),
         "DYNAMIC_ALLOCATION": str(run.config["dynamic_allocation"]).lower(),
         "SPECULATION": str(run.config["speculation"]).lower(),
-        # Both workers advertise 2 cores unconditionally (see compose.yaml), so
-        # this quota throttles how fast worker-2 runs its tasks rather than how
-        # many it is given. 0.5 CPU against 2 concurrent task slots is real
-        # contention; the old "1" merely made the worker advertise 1 core and
-        # left per-task speed untouched.
-        "WORKER_2_CPU_LIMIT": "0.5" if run.config["slow_host"] else "2",
+        # Worker-2 advertises WORKER_2_CORES slots whatever its quota (see
+        # compose.yaml), so this quota throttles how fast it runs its tasks
+        # rather than how many it is given. 6 slots on 0.3 CPU leaves each
+        # task about a twentieth of a core: slow enough that HOST sees it on
+        # the short tasks of a 2000-partition stage, and 6 tasks still running
+        # at a stage's tail for speculation to copy.
+        "WORKER_2_CPU_LIMIT": SLOW_HOST_CPU_LIMIT if run.config["slow_host"] else "2",
+        "WORKER_2_CORES": SLOW_HOST_CORES if run.config["slow_host"] else "2",
+        "WORKER_START_DELAY": str(run.config.get("worker_start_delay_s", 0)),
         "SKEW": run.config["skew"],
         "PERSIST_MODE": run.config["caching"],
         "FAILURE_MODE": failure_mode_for(run),
         "SECOND_ACTION": second_action_for(run),
-        "STORAGE_CONF_FLAGS": storage_confs_for(run),
+        "SCENARIO_CONF_FLAGS": scenario_confs_for(run),
         "TABLE_FORMAT": run.table_format,
-        "ROW_COUNT": str(row_count),
+        "ROW_COUNT": str(run.config.get("row_count", DEFAULT_ROW_COUNT)),
+        "PAYLOAD_COLUMNS": str(run.config.get("payload_columns", 0)),
+        "JOIN_CARDINALITY": str(run.config.get("join_cardinality", DEFAULT_JOIN_CARDINALITY)),
+        "FACT_SOURCE": run.config.get("fact_source", "range"),
         "PACKAGES_FLAG": packages_for(run),
         "TABLE_FORMAT_CONF_FLAGS": extra_confs_for(run),
         "EVENT_LOG_DIR": str(event_log_dir),

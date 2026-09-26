@@ -1,5 +1,6 @@
 from corpus.matrix import (
     BASELINE_CONFIG,
+    COLD_START_DELAY_S,
     CACHE_SCENARIOS,
     FAILURE_SCENARIOS,
     PAIRWISE_SCENARIOS,
@@ -33,10 +34,48 @@ def test_pairwise_scenarios_drops_all_baseline_row():
 
 
 def test_pairwise_scenarios_cover_every_expected_tag():
+    """Every tag is either reached by some row or recorded as a known miss."""
     covered: set[str] = set()
     for scenario in PAIRWISE_SCENARIOS:
         covered.update(scenario.targets_detectors)
+        covered.update(scenario.known_misses)
     assert covered == EXPECTED_TAGS
+
+
+def test_known_misses_are_not_also_targets_and_say_why():
+    for scenario in PAIRWISE_SCENARIOS:
+        assert not set(scenario.known_misses) & set(scenario.targets_detectors), scenario.id
+        assert all(reason.strip() for reason in scenario.known_misses.values()), scenario.id
+
+
+def test_pairwise_runs_carry_their_known_misses():
+    for run, scenario in zip(pairwise_runs("4.2.0"), PAIRWISE_SCENARIOS):
+        assert run.known_misses == scenario.known_misses
+
+
+def test_pairwise_rows_scale_the_cluster_and_the_map_stages():
+    for scenario in PAIRWISE_SCENARIOS:
+        assert scenario.config["third_worker"] is True
+        assert scenario.config["spark_confs"]["spark.default.parallelism"] == "20"
+
+
+def test_pairwise_confs_follow_the_targets_that_need_them():
+    for scenario in PAIRWISE_SCENARIOS:
+        confs = scenario.config["spark_confs"]
+        config = scenario.config
+        assert ("spark.speculation.minTaskRuntime" in confs) == config["speculation"]
+        assert ("spark.eventLog.logBlockUpdates.enabled" in confs) == (config["caching"] != "none")
+        assert (config.get("fact_source") == "parquet") == (config["caching"] != "none")
+        assert (config.get("second_action") == "count") == (config["caching"] != "none")
+
+
+def test_pairwise_cold_start_rows_delay_the_workers():
+    delayed = {s.id for s in PAIRWISE_SCENARIOS if s.config.get("worker_start_delay_s")}
+    assert delayed == {"pairwise-02", "pairwise-03", "pairwise-04", "pairwise-05"}
+    assert all(
+        s.config["worker_start_delay_s"] == COLD_START_DELAY_S
+        for s in PAIRWISE_SCENARIOS if s.id in delayed
+    )
 
 
 def test_pairwise_runs_fills_in_latest_version():
