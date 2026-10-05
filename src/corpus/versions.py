@@ -3,8 +3,8 @@ check-only lookup of what the Apache dist listing offers.
 
 The generation matrix reads SPARK_VERSIONS and never the network: log ids are a
 consumer contract (sparkforensics names corpus files in its CI), so they must
-not change because a patch release appeared upstream or Apache retired an
-old one. Bumping a patch is a one-line edit here; the id stays the same and
+not change with the upstream listing, whether a patch release appears or
+Apache drops one. Bumping a patch is a one-line edit here; the id stays the same and
 the new patch is recorded in the catalog entry's spark_version.
 """
 from __future__ import annotations
@@ -87,7 +87,7 @@ def upstream_report(
     pinned: dict[str, str], upstream: list[SparkVersion]
 ) -> list[str]:
     """One line per difference between the pinned set and the upstream
-    listing: a newer patch, a pinned patch Apache no longer lists, or a minor
+    listing: a newer patch, a pinned patch missing from the listing, or a minor
     line that is not pinned. Empty when they agree. Informational only, since
     nothing here feeds the matrix."""
     listed = {str(v) for v in upstream}
@@ -98,7 +98,7 @@ def upstream_report(
         if newest is not None and str(newest) != patch:
             lines.append(f"{line}: pinned {patch}, upstream has {newest}")
         if patch not in listed:
-            lines.append(f"{line}: pinned {patch} is no longer on the dist listing")
+            lines.append(f"{line}: pinned {patch} is not on the dist listing")
     for line, newest in latest.items():
         if line not in pinned:
             lines.append(f"{line}: not pinned, upstream has {newest}")

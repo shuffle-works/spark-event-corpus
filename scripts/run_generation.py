@@ -119,8 +119,8 @@ def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
         **({"known_misses": run.known_misses} if run.known_misses else {}),
         "generated_at": tag[1:],
         "size_bytes": size_of(dest),
-        # Recorded only for logs that are not one plain file, which is every
-        # entry written before the event-log scenarios existed.
+        # Recorded only for logs that are not one plain file; entries for plain
+        # logs omit both fields.
         **({"log_layout": layout["layout"], "compression": layout["compression"]}
            if layout != {"layout": "single-file", "compression": "none"} else {}),
     }

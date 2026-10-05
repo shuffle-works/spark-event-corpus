@@ -71,7 +71,7 @@ different `spark-event-corpus-data` clone than the sibling one.
 `SPARK_VERSIONS` in `src/corpus/versions.py` pins one patch release per minor
 line, and `SCENARIO_SPARK_LINE` picks the line the scenario runs use. Nothing
 resolves versions from the network, so a run never changes because Apache
-published or retired a release. Baseline ids are keyed by minor line
+published or dropped a release. Baseline ids are keyed by minor line
 (`spark-4.1-parquet-baseline`) and the patch is recorded in the entry's
 `spark_version`: bumping a patch regenerates the same ids, so file names that
 consumers hard-code keep working. Scenario ids (`pairwise-01`, `failure-job`)
@@ -81,7 +81,7 @@ do not carry a version; changing `SCENARIO_SPARK_LINE` means regenerating them
     python3 scripts/run_generation.py --check-upstream
 
 prints where the pinned set differs from the Apache dist listing (newer patch,
-unpinned minor, pinned patch no longer listed) and generates nothing.
+unpinned minor, pinned patch missing from the listing) and generates nothing.
 
 ### Expect 34 generated runs, not 35
 
@@ -271,9 +271,9 @@ These runs target no detectors, so they add nothing to the tag counts above.
 
 ## The Delta DML scenarios
 
-The public corpus had no log of Delta write statements other than the baseline
-overwrite. Five runs on the scenario line seed a Delta table of 1M rows
-(partitioned by `bucket`, 4 buckets) and run DML against it
+Five runs on the scenario line give the corpus Delta write statements beyond
+the baseline overwrite. Each seeds a Delta table of 1M rows
+(partitioned by `bucket`, 4 buckets) and runs DML against it
 (`DML_SCENARIOS` in `src/corpus/matrix.py`, `--dml` in
 `workload/generate_events.py`). Each run checks the table's row counts at the
 end, so a statement that silently did nothing fails the run.
@@ -298,8 +298,8 @@ record where each cached partition was stored (`CACHE_SCENARIOS` in
 `src/corpus/matrix.py`). Each is the baseline config with the fact table
 persisted, read by a second action after the join (`--second-action reread`),
 under `storage_pressure`: the `STORAGE_PRESSURE_CONFS` in
-`src/corpus/orchestration.py` shrink unified memory so the table no longer
-fits, and set `spark.eventLog.logBlockUpdates.enabled=true`. Without that flag
+`src/corpus/orchestration.py` shrink unified memory below what the table
+needs, and set `spark.eventLog.logBlockUpdates.enabled=true`. Without that flag
 the log has no `SparkListenerBlockUpdated` events, and the cache fields of
 `RDD Info` that modern Spark writes are always 0, so no other log in the corpus
 says what was cached.

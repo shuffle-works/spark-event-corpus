@@ -43,8 +43,8 @@ STORAGE_PRESSURE_CONFS = {
 
 
 # The event-log confs every run gets unless its config sets event_log_confs:
-# plain, single-file NDJSON, which is what the corpus has always shipped. Spark
-# 4 turns both on by default, so the event-log scenarios override this.
+# plain, single-file NDJSON, the corpus's standard format. Spark 4 turns both
+# on by default, so the event-log scenarios override this.
 DEFAULT_EVENT_LOG_CONFS = {
     "spark.eventLog.rolling.enabled": "false",
     "spark.eventLog.compress": "false",

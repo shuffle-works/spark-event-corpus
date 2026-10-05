@@ -62,11 +62,11 @@ def test_upstream_report_is_empty_when_pins_match():
     assert upstream_report({"3.5": "3.5.3", "4.0": "4.0.0", "4.1": "4.1.2"}, upstream) == []
 
 
-def test_upstream_report_lists_newer_patch_unpinned_minor_and_retired_pin():
+def test_upstream_report_lists_newer_patch_unpinned_minor_and_missing_pin():
     upstream = parse_versions(SAMPLE_LISTING)
     pinned = {"3.5": "3.5.1", "4.1": "4.1.2", "3.4": "3.4.9"}
     report = upstream_report(pinned, upstream)
     assert "3.5: pinned 3.5.1, upstream has 3.5.3" in report
-    assert "3.4: pinned 3.4.9 is no longer on the dist listing" in report
+    assert "3.4: pinned 3.4.9 is not on the dist listing" in report
     assert "4.0: not pinned, upstream has 4.0.0" in report
     assert not any(line.startswith("4.1") for line in report)
