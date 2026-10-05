@@ -430,3 +430,30 @@ def event_log_runs(latest_version: str) -> list[Run]:
         )
         for t in EVENT_LOG_SCENARIOS
     ]
+
+
+# Delta DML runs on a seeded Delta table, partitioned by bucket; see
+# workload/generate_events.py. The target table is row_count rows, small
+# enough that a rewrite stays quick. concurrent-merge runs two merges in two
+# threads of one session, each pinned to its own partition so both commit.
+DML_CONFIG = {**BASELINE_CONFIG, "row_count": 1_000_000}
+DML_SCENARIOS: list[ScenarioTemplate] = [
+    ScenarioTemplate(
+        id=f"delta-{mode}", config={**DML_CONFIG, "dml": mode}, targets_detectors=[]
+    )
+    for mode in ("merge-sql", "merge-api", "update", "delete", "concurrent-merge")
+]
+
+
+def dml_runs(latest_version: str) -> list[Run]:
+    return [
+        Run(
+            id=t.id,
+            spark_version=latest_version,
+            table_format="delta",
+            scenario=t.id,
+            config=t.config,
+            targets_detectors=t.targets_detectors,
+        )
+        for t in DML_SCENARIOS
+    ]

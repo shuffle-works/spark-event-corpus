@@ -1,5 +1,6 @@
 from corpus.matrix import (
     BASELINE_CONFIG,
+    DML_SCENARIOS,
     EVENT_LOG_SCENARIOS,
     COLD_START_DELAY_S,
     CACHE_SCENARIOS,
@@ -7,6 +8,7 @@ from corpus.matrix import (
     PAIRWISE_SCENARIOS,
     baseline_runs,
     cache_runs,
+    dml_runs,
     event_log_runs,
     failure_runs,
     pairwise_runs,
@@ -165,3 +167,22 @@ def test_event_log_runs_use_the_scenario_version_and_target_no_detectors():
     assert len(runs) == 5
     assert all(r.spark_version == "4.2.0" and r.table_format == "parquet" for r in runs)
     assert all(r.targets_detectors == [] for r in runs)
+
+
+def test_dml_scenarios_cover_merge_update_delete_and_concurrent_merges():
+    modes = {s.config["dml"] for s in DML_SCENARIOS}
+    assert modes == {"merge-sql", "merge-api", "update", "delete", "concurrent-merge"}
+    assert {s.id for s in DML_SCENARIOS} == {f"delta-{m}" for m in modes}
+
+
+def test_dml_runs_are_delta_runs_on_the_scenario_version():
+    runs = dml_runs("4.2.0")
+    assert len(runs) == 5
+    assert all(r.spark_version == "4.2.0" and r.table_format == "delta" for r in runs)
+    assert all(r.config["row_count"] == 1_000_000 for r in runs)
+
+
+def test_dml_scenarios_stay_out_of_the_other_families():
+    dml_ids = {s.id for s in DML_SCENARIOS}
+    others = {s.id for s in PAIRWISE_SCENARIOS + FAILURE_SCENARIOS + CACHE_SCENARIOS + EVENT_LOG_SCENARIOS}
+    assert not dml_ids & others

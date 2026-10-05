@@ -6,6 +6,7 @@ from corpus.orchestration import (
     KILLED_RUN_EXIT_CODE,
     compose_services_for,
     env_for_run,
+    dml_mode_for,
     event_log_flags_for,
     expected_submit_exit_code,
     extra_confs_for,
@@ -141,3 +142,9 @@ def test_event_log_flags_default_to_plain_single_file():
 def test_event_log_flags_use_the_runs_own_confs_when_set():
     run = make_run(event_log_confs={"spark.eventLog.compression.codec": "lz4"})
     assert event_log_flags_for(run) == "--conf spark.eventLog.compression.codec=lz4"
+
+
+def test_dml_mode_defaults_to_none_and_reaches_the_env():
+    assert dml_mode_for(make_run()) == "none"
+    run = make_run("delta", dml="merge-sql")
+    assert env_for_run(run, Path("/tmp/x"), Path("/tmp/y"))["DML_MODE"] == "merge-sql"

@@ -67,6 +67,10 @@ def expected_submit_exit_code(run: Run) -> int:
     return KILLED_RUN_EXIT_CODE if failure_mode_for(run) == "killed" else 0
 
 
+def dml_mode_for(run: Run) -> str:
+    return run.config.get("dml", "none")
+
+
 def second_action_for(run: Run) -> str:
     return run.config.get("second_action", "none")
 
@@ -137,6 +141,7 @@ def env_for_run(run: Run, event_log_dir: Path, workload_output_dir: Path) -> dic
         "SKEW": run.config["skew"],
         "PERSIST_MODE": run.config["caching"],
         "FAILURE_MODE": failure_mode_for(run),
+        "DML_MODE": dml_mode_for(run),
         "SECOND_ACTION": second_action_for(run),
         "EVENT_LOG_CONF_FLAGS": event_log_flags_for(run),
         "SCENARIO_CONF_FLAGS": scenario_confs_for(run),

@@ -82,17 +82,17 @@ do not carry a version; changing `SCENARIO_SPARK_LINE` means regenerating them
 prints where the pinned set differs from the Apache dist listing (newer patch,
 unpinned minor, pinned patch no longer listed) and generates nothing.
 
-### Expect 29 generated runs, not 30
+### Expect 34 generated runs, not 35
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
 three table formats = 12 baselines, plus 7 pairwise scenario runs, 4 failure
 scenario runs and 2 cache scenario runs on the scenario line (4.2) = 25, plus 5
-event-log scenario runs (see below) = 30. One of
+event-log and 5 Delta DML scenario runs (see below) = 35. One of
 those, **Spark 4.2 + Iceberg, is deliberately skipped**: Iceberg has not
 published a Spark 4.2 runtime artifact yet, so there is nothing to run
 against. The script prints
 `SKIPPED: ... no upstream table-format artifact available yet` and continues.
-A 29-of-30 count is the expected outcome, not a failure. It becomes 30 on its
+A 34-of-35 count is the expected outcome, not a failure. It becomes 35 on its
 own once upstream Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
 `src/corpus/table_formats.py` gains a `4.2` to `iceberg` entry.
 
@@ -268,6 +268,28 @@ in); `validate_ndjson_event_log` still accepts plain text only.
 
 These runs target no detectors, so they add nothing to the tag counts above.
 `--only <id>...` runs just the named ids.
+
+## The Delta DML scenarios
+
+The public corpus had no log of Delta write statements other than the baseline
+overwrite. Five runs on the scenario line seed a Delta table of 1M rows
+(partitioned by `bucket`, 4 buckets) and run DML against it
+(`DML_SCENARIOS` in `src/corpus/matrix.py`, `--dml` in
+`workload/generate_events.py`). Each run checks the table's row counts at the
+end, so a statement that silently did nothing fails the run.
+
+| Run | Statement |
+|---|---|
+| `delta-merge-sql` | `MERGE INTO ... USING` a temp view, update matched, insert unmatched |
+| `delta-merge-api` | the same merge through `DeltaTable.merge` |
+| `delta-update` | `UPDATE ... WHERE id % 10 = 0` |
+| `delta-delete` | `DeltaTable.delete("id % 4 = 0")` |
+| `delta-concurrent-merge` | two threads of one session merge buckets 0 and 1 at once |
+
+In the concurrent run each merge's `ON` clause pins its own partition, so the
+two transactions touch disjoint files and both commit; the jobs carry the
+descriptions `merge bucket 0` and `merge bucket 1`, and their file-scan phases
+overlap in the log. These runs target no detectors.
 
 ## The cache scenarios
 

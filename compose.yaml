@@ -115,6 +115,7 @@ services:
       --persist-mode ${PERSIST_MODE}
       --table-format ${TABLE_FORMAT}
       --failure ${FAILURE_MODE}
+      --dml ${DML_MODE}
       --second-action ${SECOND_ACTION}
       --payload-columns ${PAYLOAD_COLUMNS}
       --join-cardinality ${JOIN_CARDINALITY}

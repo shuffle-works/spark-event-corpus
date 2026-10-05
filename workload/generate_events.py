@@ -17,6 +17,10 @@ target clear their floors: the extra columns add shuffle bytes, and reading
 the fact table back from Parquet and counting it after the join gives the
 caching detector a file-scan relation that two SQL executions read.
 
+--dml replaces the join workload with Delta DML (MERGE, UPDATE, DELETE) over a
+seeded table, for the Delta scenarios in src/corpus/matrix.py; it needs
+--table-format delta.
+
 --failure replaces the join workload with a small job that fails on purpose,
 for the failure scenarios in src/corpus/matrix.py. Which task attempts fail is
 decided by partition index and attempt number alone, so every run fails the
@@ -25,6 +29,7 @@ same way.
 from __future__ import annotations
 
 import argparse
+import threading
 import time
 
 from py4j.protocol import Py4JJavaError
@@ -61,7 +66,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--table-format", choices=["parquet", "delta", "iceberg"], default="parquet")
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--failure", choices=["none", *FAILURE_SCENARIOS], default="none")
-    return parser.parse_args()
+    parser.add_argument("--dml", choices=["none", *DML_SCENARIOS], default="none")
+    args = parser.parse_args()
+    if args.dml != "none" and args.table_format != "delta":
+        parser.error("--dml needs --table-format delta")
+    return args
 
 
 def build_fact_df(
@@ -196,6 +205,153 @@ FAILURE_SCENARIOS = {
 }
 
 
+# Delta DML scenarios. Each seeds a Delta table partitioned by bucket, runs its
+# statements against it, and checks the table ended up as the statements say,
+# so a scenario that silently did nothing fails the run instead of shipping a
+# log with no DML in it.
+DML_BUCKETS = 4
+# Every MATCH_EVERY-th seeded id is updated by a merge; the same number of new
+# ids again, over a tenth of the seeded count, are inserted.
+MATCH_EVERY = 5
+INSERT_FRACTION = 10
+
+
+def seed_delta_table(spark: SparkSession, row_count: int, path: str) -> None:
+    (
+        spark.range(row_count)
+        .select(
+            "id",
+            (fn.col("id") % DML_BUCKETS).alias("bucket"),
+            fn.rand().alias("value"),
+            fn.lit("seed").alias("status"),
+        )
+        .write.format("delta").partitionBy("bucket").save(path)
+    )
+
+
+def build_merge_source(spark: SparkSession, row_count: int):
+    """Rows for a merge: every MATCH_EVERY-th seeded id (matched, updated) and
+    row_count // INSERT_FRACTION ids past the seeded range (not matched,
+    inserted). Same columns as the target, so UPDATE SET * / INSERT * apply."""
+    inserts = row_count // INSERT_FRACTION
+    return (
+        spark.range(row_count + inserts)
+        .filter((fn.col("id") % MATCH_EVERY == 0) | (fn.col("id") >= row_count))
+        .select(
+            "id",
+            (fn.col("id") % DML_BUCKETS).alias("bucket"),
+            (fn.rand() + 1000).alias("value"),
+            fn.lit("merged").alias("status"),
+        )
+    )
+
+
+def count_where(spark: SparkSession, path: str, condition: str = "true") -> int:
+    return spark.read.format("delta").load(path).where(condition).count()
+
+
+def expect_count(actual: int, expected: int, what: str) -> None:
+    if actual != expected:
+        raise RuntimeError(f"{what}: expected {expected} rows, found {actual}")
+
+
+def multiples_below(limit: int, step: int) -> int:
+    """How many ids in range(limit) are divisible by step."""
+    return -(-limit // step)
+
+
+def run_merge_sql(spark: SparkSession, row_count: int, path: str) -> None:
+    build_merge_source(spark, row_count).createOrReplaceTempView("merge_source")
+    spark.sql(
+        f"MERGE INTO delta.`{path}` AS t USING merge_source AS s ON t.id = s.id "
+        "WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *"
+    )
+    inserted = row_count // INSERT_FRACTION
+    expect_count(count_where(spark, path), row_count + inserted, "merge-sql total")
+    expect_count(count_where(spark, path, "status = 'merged'"), multiples_below(row_count, MATCH_EVERY) + inserted, "merge-sql merged")
+
+
+def run_merge_api(spark: SparkSession, row_count: int, path: str) -> None:
+    from delta.tables import DeltaTable
+
+    (
+        DeltaTable.forPath(spark, path).alias("t")
+        .merge(build_merge_source(spark, row_count).alias("s"), "t.id = s.id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute()
+    )
+    inserted = row_count // INSERT_FRACTION
+    expect_count(count_where(spark, path), row_count + inserted, "merge-api total")
+    expect_count(count_where(spark, path, "status = 'merged'"), multiples_below(row_count, MATCH_EVERY) + inserted, "merge-api merged")
+
+
+def run_update(spark: SparkSession, row_count: int, path: str) -> None:
+    spark.sql(f"UPDATE delta.`{path}` SET value = value * 1.1, status = 'updated' WHERE id % 10 = 0")
+    expect_count(count_where(spark, path), row_count, "update total")
+    expect_count(count_where(spark, path, "status = 'updated'"), multiples_below(row_count, 10), "update updated")
+
+
+def run_delete(spark: SparkSession, row_count: int, path: str) -> None:
+    from delta.tables import DeltaTable
+
+    DeltaTable.forPath(spark, path).delete("id % 4 = 0")
+    expect_count(count_where(spark, path), row_count - multiples_below(row_count, 4), "delete total")
+
+
+def run_concurrent_merges(spark: SparkSession, row_count: int, path: str) -> None:
+    """Two threads of one session each merge one bucket into the same table at
+    the same time. Each ON clause pins its own partition, so the transactions
+    touch disjoint files and both commit; a merge without that predicate would
+    conflict with the other under Delta's optimistic concurrency."""
+    from delta.tables import DeltaTable
+
+    source = build_merge_source(spark, row_count)
+    buckets = [0, 1]
+    start = threading.Barrier(len(buckets))
+    errors: list[BaseException] = []
+
+    def merge_bucket(bucket: int) -> None:
+        try:
+            spark.sparkContext.setJobDescription(f"merge bucket {bucket}")
+            start.wait()
+            (
+                DeltaTable.forPath(spark, path).alias("t")
+                .merge(
+                    source.where(f"bucket = {bucket}").alias("s"),
+                    f"t.bucket = {bucket} AND t.id = s.id",
+                )
+                .whenMatchedUpdateAll()
+                .whenNotMatchedInsertAll()
+                .execute()
+            )
+        except BaseException as exc:  # re-raised on the main thread below
+            errors.append(exc)
+
+    threads = [threading.Thread(target=merge_bucket, args=(b,)) for b in buckets]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    if errors:
+        raise RuntimeError(f"concurrent merge failed: {errors[0]!r}") from errors[0]
+    merged = " OR ".join(f"bucket = {b}" for b in buckets)
+    expected = sum(
+        1 for i in range(row_count + row_count // INSERT_FRACTION)
+        if (i % MATCH_EVERY == 0 or i >= row_count) and i % DML_BUCKETS in buckets
+    )
+    expect_count(count_where(spark, path, f"status = 'merged' AND ({merged})"), expected, "concurrent merges")
+
+
+DML_SCENARIOS = {
+    "merge-sql": run_merge_sql,
+    "merge-api": run_merge_api,
+    "update": run_update,
+    "delete": run_delete,
+    "concurrent-merge": run_concurrent_merges,
+}
+
+
 def main() -> None:
     args = parse_args()
     builder = SparkSession.builder.appName("spark-event-corpus-workload")
@@ -205,6 +361,13 @@ def main() -> None:
 
     if args.failure != "none":
         FAILURE_SCENARIOS[args.failure](spark.sparkContext)
+        spark.stop()
+        return
+
+    if args.dml != "none":
+        table_path = f"{args.output_path}-delta-table"
+        seed_delta_table(spark, args.row_count, table_path)
+        DML_SCENARIOS[args.dml](spark, args.row_count, table_path)
         spark.stop()
         return
 

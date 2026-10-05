@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Runs the full baseline + pairwise generation matrix, plus the standalone
-failure, cache and event-log scenarios, end-to-end: take the pinned Spark versions
+failure, cache, event-log and Delta DML scenarios, end-to-end: take the pinned Spark versions
 (src/corpus/versions.py) -> run each baseline/scenario via Docker Compose ->
 validate the produced log -> copy it into the data repo -> append a catalog entry.
 Committing/tagging the data repo happens once, by hand, after this finishes
@@ -23,6 +23,7 @@ from corpus.matrix import (
     Run,
     baseline_runs,
     cache_runs,
+    dml_runs,
     event_log_runs,
     failure_runs,
     pairwise_runs,
@@ -177,6 +178,7 @@ def main() -> None:
         + failure_runs(scenario_version)
         + cache_runs(scenario_version)
         + event_log_runs(scenario_version)
+        + dml_runs(scenario_version)
     )
 
     # Restarts must not re-attempt runs a prior invocation already finished
