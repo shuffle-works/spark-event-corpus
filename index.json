@@ -1313,5 +1313,268 @@
     "targets_detectors": [
       "CSTOR"
     ]
+  },
+  {
+    "checksum": "sha256:af01a37fe3adc134f905ed0ff316bfaef2ada6d78cd5341817de8c84f79fdc1d",
+    "compression": "zstd",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "event_log_confs": {
+        "spark.eventLog.rolling.maxFileSize": "2m"
+      },
+      "shuffle_partitions": 1000,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "eventlog-spark4-default",
+    "log_layout": "rolling-dir",
+    "path": "logs/eventlog-spark4-default/eventlog_v2_app-20261005222518-0000",
+    "scenario": "eventlog-spark4-default",
+    "size_bytes": 369550,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:5aecd76d74c3f4f54ae3672ffe117b12676a13fcc6ee01d60e6c156d405b59ed",
+    "compression": "none",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "event_log_confs": {
+        "spark.eventLog.compress": "false",
+        "spark.eventLog.rolling.enabled": "true",
+        "spark.eventLog.rolling.maxFileSize": "2m"
+      },
+      "shuffle_partitions": 1000,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "eventlog-rolling",
+    "log_layout": "rolling-dir",
+    "path": "logs/eventlog-rolling/eventlog_v2_app-20261005222547-0000",
+    "scenario": "eventlog-rolling",
+    "size_bytes": 9275504,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:c1898135c9f6916872b1fe3be7e46f6bffe3226f0031db1082b6b5a9edfbbad0",
+    "compression": "zstd",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "event_log_confs": {
+        "spark.eventLog.compress": "true",
+        "spark.eventLog.compression.codec": "zstd",
+        "spark.eventLog.rolling.enabled": "false"
+      },
+      "shuffle_partitions": 1000,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "eventlog-zstd",
+    "log_layout": "single-file",
+    "path": "logs/eventlog-zstd.zstd",
+    "scenario": "eventlog-zstd",
+    "size_bytes": 360972,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:f83f78dbaa4fd96a09b24b1dece10ec4858d6237f6d78a6789d06a0f64a91cd7",
+    "compression": "lz4",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "event_log_confs": {
+        "spark.eventLog.compress": "true",
+        "spark.eventLog.compression.codec": "lz4",
+        "spark.eventLog.rolling.enabled": "false"
+      },
+      "shuffle_partitions": 1000,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "eventlog-lz4",
+    "log_layout": "single-file",
+    "path": "logs/eventlog-lz4.lz4",
+    "scenario": "eventlog-lz4",
+    "size_bytes": 1400576,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:c1d5a2e572ed70f4d40920d108f8812c20f656d120435b743c6e46c90e084c72",
+    "compression": "snappy",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dynamic_allocation": true,
+      "event_log_confs": {
+        "spark.eventLog.compress": "true",
+        "spark.eventLog.compression.codec": "snappy",
+        "spark.eventLog.rolling.enabled": "false"
+      },
+      "shuffle_partitions": 1000,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "eventlog-snappy",
+    "log_layout": "single-file",
+    "path": "logs/eventlog-snappy.snappy",
+    "scenario": "eventlog-snappy",
+    "size_bytes": 1461798,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "parquet",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:21c1127e46e3018c62d95b647827597742b2c3086c9283dc75f8ea129b6724aa",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dml": "merge-sql",
+      "dynamic_allocation": true,
+      "row_count": 1000000,
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "delta-merge-sql",
+    "path": "logs/delta-merge-sql.ndjson",
+    "scenario": "delta-merge-sql",
+    "size_bytes": 11219799,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "delta",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:b265b73d5ae7c6b5412255d66c3fe67e9530d7051b96b499f80d4b9224abfba0",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dml": "merge-api",
+      "dynamic_allocation": true,
+      "row_count": 1000000,
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "delta-merge-api",
+    "path": "logs/delta-merge-api.ndjson",
+    "scenario": "delta-merge-api",
+    "size_bytes": 11227951,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "delta",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:77f512e3039691c12758fde054b3d58b8ef8fd927d35bdbb24aeaa705d3eb331",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dml": "update",
+      "dynamic_allocation": true,
+      "row_count": 1000000,
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "delta-update",
+    "path": "logs/delta-update.ndjson",
+    "scenario": "delta-update",
+    "size_bytes": 4681274,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "delta",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:86e3193828e4923cf323034811b8980df9fd4c3c285f0c404b3b90d3e44f53aa",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dml": "delete",
+      "dynamic_allocation": true,
+      "row_count": 1000000,
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "delta-delete",
+    "path": "logs/delta-delete.ndjson",
+    "scenario": "delta-delete",
+    "size_bytes": 4269941,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "delta",
+    "targets_detectors": []
+  },
+  {
+    "checksum": "sha256:b7f39976281e2aea37b774666119fef35b94c133b138fd2a53bcb3a53d0538f9",
+    "config_diff": {
+      "aqe": true,
+      "caching": "none",
+      "dml": "concurrent-merge",
+      "dynamic_allocation": true,
+      "row_count": 1000000,
+      "shuffle_partitions": 200,
+      "skew": "none",
+      "slow_host": false,
+      "speculation": false
+    },
+    "data_repo_tag": "v2026-10-05",
+    "generated_at": "2026-10-05",
+    "id": "delta-concurrent-merge",
+    "path": "logs/delta-concurrent-merge.ndjson",
+    "scenario": "delta-concurrent-merge",
+    "size_bytes": 18690329,
+    "source": "self-generated",
+    "spark_version": "4.2.0",
+    "table_format": "delta",
+    "targets_detectors": []
   }
 ]
