@@ -41,16 +41,19 @@ class Run:
     known_misses: dict[str, str] = field(default_factory=dict)
 
 
-def baseline_runs(versions: list[str]) -> list[Run]:
+def baseline_runs(versions: dict[str, str]) -> list[Run]:
+    """One baseline per table format for each pinned Spark version. The id is
+    keyed by the minor line, so a patch bump keeps the id and only changes
+    spark_version."""
     return [
         Run(
-            id=f"spark-{version}-{fmt}-baseline",
+            id=f"spark-{line}-{fmt}-baseline",
             spark_version=version,
             table_format=fmt,
             scenario="baseline",
             config=dict(BASELINE_CONFIG),
         )
-        for version in versions
+        for line, version in versions.items()
         for fmt in TABLE_FORMATS
     ]
 

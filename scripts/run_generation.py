@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Runs the full baseline + pairwise generation matrix, plus the standalone
-failure and cache scenarios, end-to-end: resolve
-versions -> run each baseline/scenario via Docker Compose -> validate the
-produced log -> copy it into the data repo -> append a catalog entry.
+failure and cache scenarios, end-to-end: take the pinned Spark versions
+(src/corpus/versions.py) -> run each baseline/scenario via Docker Compose ->
+validate the produced log -> copy it into the data repo -> append a catalog entry.
 Committing/tagging the data repo happens once, by hand, after this finishes
 (see the plan's Task 11), not per-run.
 """
@@ -24,7 +24,13 @@ from corpus.orchestration import compose_services_for, env_for_run, expected_sub
 from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import generation_tag_for
 from corpus.validate import validate_ndjson_event_log
-from corpus.versions import resolve_versions
+from corpus.versions import (
+    SPARK_VERSIONS,
+    VersionResolutionError,
+    resolve_versions,
+    scenario_spark_version,
+    upstream_report,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
@@ -103,6 +109,14 @@ def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
     append_entry(CATALOG_PATH, entry)
 
 
+def check_upstream() -> None:
+    try:
+        lines = upstream_report(SPARK_VERSIONS, resolve_versions())
+    except VersionResolutionError as exc:
+        sys.exit(str(exc))
+    print("\n".join(lines) if lines else "pinned Spark versions match the upstream listing")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--event-log-dir", type=Path, default=Path("/tmp/spark-event-corpus-runs"))
@@ -116,7 +130,15 @@ def main() -> None:
         "--data-repo", type=Path, default=DEFAULT_DATA_REPO,
         help="spark-event-corpus-data clone to write the logs into (default: sibling of this repo)",
     )
+    parser.add_argument(
+        "--check-upstream", action="store_true",
+        help="print how the pinned Spark versions differ from the Apache dist listing and "
+        "exit; generates nothing",
+    )
     args = parser.parse_args()
+    if args.check_upstream:
+        check_upstream()
+        return
     # generated_at is derived from the tag, so it has to be a dated one.
     if args.tag and not re.fullmatch(r"v\d{4}-\d{2}-\d{2}", args.tag):
         parser.error(f"--tag must look like v2026-09-24, got {args.tag!r}")
@@ -127,10 +149,12 @@ def main() -> None:
     # by hand.
     tag = args.tag or generation_tag_for(CATALOG_PATH)
 
-    versions = [str(v) for v in resolve_versions()]
-    latest = versions[-1]
+    scenario_version = scenario_spark_version()
     runs: list[Run] = (
-        baseline_runs(versions) + pairwise_runs(latest) + failure_runs(latest) + cache_runs(latest)
+        baseline_runs(SPARK_VERSIONS)
+        + pairwise_runs(scenario_version)
+        + failure_runs(scenario_version)
+        + cache_runs(scenario_version)
     )
 
     # Restarts must not re-attempt runs a prior invocation already finished

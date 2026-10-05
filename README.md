@@ -18,7 +18,7 @@ see [Check the detector tags](#check-the-detector-tags)).
 ## Prerequisites
 
 - Docker (the workload runs on a throwaway Spark standalone cluster) and
-  network access (Spark images, Maven artifacts, the Apache dist listing).
+  network access (Spark images and Maven artifacts).
 - **A sibling `spark-event-corpus-data` git repo**, cloned next to this one:
 
       <parent>/
@@ -65,11 +65,28 @@ To regenerate some runs, delete their entries from `index.json` first; every
 other run is skipped as already done. `--data-repo` writes the logs into a
 different `spark-event-corpus-data` clone than the sibling one.
 
+### Pinned Spark versions
+
+`SPARK_VERSIONS` in `src/corpus/versions.py` pins one patch release per minor
+line, and `SCENARIO_SPARK_LINE` picks the line the scenario runs use. Nothing
+resolves versions from the network, so a run never changes because Apache
+published or retired a release. Baseline ids are keyed by minor line
+(`spark-4.1-parquet-baseline`) and the patch is recorded in the entry's
+`spark_version`: bumping a patch regenerates the same ids, so file names that
+consumers hard-code keep working. Scenario ids (`pairwise-01`, `failure-job`)
+do not carry a version; changing `SCENARIO_SPARK_LINE` means regenerating them
+(delete their catalog entries first).
+
+    python3 scripts/run_generation.py --check-upstream
+
+prints where the pinned set differs from the Apache dist listing (newer patch,
+unpinned minor, pinned patch no longer listed) and generates nothing.
+
 ### Expect 24 generated runs, not 25
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
 three table formats = 12 baselines, plus 7 pairwise scenario runs, 4 failure
-scenario runs and 2 cache scenario runs on the latest version = 25. One of
+scenario runs and 2 cache scenario runs on the scenario line (4.2) = 25. One of
 those, **Spark 4.2 + Iceberg, is deliberately skipped**: Iceberg has not
 published a Spark 4.2 runtime artifact yet, so there is nothing to run
 against. The script prints

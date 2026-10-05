@@ -17,11 +17,19 @@ EXPECTED_TAGS = {
 
 
 def test_baseline_runs_covers_every_version_format_pair():
-    runs = baseline_runs(["3.5.3", "4.0.0"])
+    runs = baseline_runs({"3.5": "3.5.3", "4.0": "4.0.0"})
     assert len(runs) == 6
     ids = {r.id for r in runs}
-    assert "spark-3.5.3-parquet-baseline" in ids
-    assert "spark-4.0.0-iceberg-baseline" in ids
+    assert "spark-3.5-parquet-baseline" in ids
+    assert "spark-4.0-iceberg-baseline" in ids
+
+
+def test_baseline_ids_are_keyed_by_minor_line_and_keep_the_patch_as_data():
+    by_id = {r.id: r for r in baseline_runs({"4.1": "4.1.3"})}
+    assert by_id["spark-4.1-delta-baseline"].spark_version == "4.1.3"
+    # A patch bump changes the version, not the id a consumer hard-codes.
+    bumped = {r.id for r in baseline_runs({"4.1": "4.1.4"})}
+    assert bumped == set(by_id)
 
 
 def test_pairwise_scenarios_has_exactly_seven_rows():
