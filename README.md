@@ -267,7 +267,6 @@ snappy with `cramjam`, using the framing of the JVM libraries Spark wraps them
 in); `validate_ndjson_event_log` still accepts plain text only.
 
 These runs target no detectors, so they add nothing to the tag counts above.
-`--only <id>...` runs just the named ids.
 
 ## The Delta DML scenarios
 

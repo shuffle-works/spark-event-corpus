@@ -149,10 +149,6 @@ def main() -> None:
         help="spark-event-corpus-data clone to write the logs into (default: sibling of this repo)",
     )
     parser.add_argument(
-        "--only", nargs="+", metavar="ID",
-        help="run only these ids (e.g. eventlog-zstd); the rest are left alone, not skipped",
-    )
-    parser.add_argument(
         "--check-upstream", action="store_true",
         help="print how the pinned Spark versions differ from the Apache dist listing and "
         "exit; generates nothing",
@@ -186,12 +182,6 @@ def main() -> None:
     # which would otherwise crash the whole script on the first repeat.
     # Loaded once per invocation, not per run, since a run can commit to the
     # catalog mid-loop.
-    if args.only:
-        unknown = set(args.only) - {run.id for run in runs}
-        if unknown:
-            parser.error(f"--only names no known run: {', '.join(sorted(unknown))}")
-        runs = [run for run in runs if run.id in args.only]
-
     already_done = {entry["id"] for entry in load_catalog(CATALOG_PATH)}
 
     for run in runs:
