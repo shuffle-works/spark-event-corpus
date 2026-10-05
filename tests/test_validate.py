@@ -1,8 +1,15 @@
 import os
+import struct
 
+import cramjam
 import pytest
 
-from corpus.validate import validate_ndjson_event_log, InvalidEventLog
+from corpus.validate import (
+    InvalidEventLog,
+    log_layout,
+    validate_event_log,
+    validate_ndjson_event_log,
+)
 
 
 def test_valid_log_returns_line_count(tmp_path):
@@ -46,12 +53,6 @@ def test_compressed_input_raises_invalid_event_log_not_unicode_error(tmp_path):
 
 
 # --- validate_event_log: what Spark 4 writes by default ---------------------
-
-import struct
-
-import cramjam
-
-from corpus.validate import log_layout, validate_event_log
 
 EVENTS = b'{"Event": "SparkListenerLogStart"}\n{"Event": "SparkListenerApplicationEnd"}\n'
 
