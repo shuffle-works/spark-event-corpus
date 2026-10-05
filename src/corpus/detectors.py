@@ -94,7 +94,7 @@ def verify_entries(
         if entry.get("source") != "self-generated":
             continue
         log_path = data_repo / entry["path"]
-        if not log_path.is_file():
+        if not log_path.exists():
             results.append(CheckResult(id=entry["id"], error=f"log not found: {log_path}"))
             continue
         if sha256_of(log_path) != entry["checksum"]:

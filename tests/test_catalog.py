@@ -1,6 +1,6 @@
 import pytest
 
-from corpus.catalog import append_entry, load_catalog, save_catalog, sha256_of
+from corpus.catalog import append_entry, load_catalog, log_relpath, save_catalog, sha256_of, size_of
 
 
 def test_sha256_of_matches_known_hash(tmp_path):
@@ -39,3 +39,33 @@ def test_append_entry_rejects_duplicate_id(tmp_path):
     append_entry(catalog_path, {"id": "dup", "path": "a"})
     with pytest.raises(ValueError):
         append_entry(catalog_path, {"id": "dup", "path": "b"})
+
+
+def test_sha256_of_a_directory_changes_with_any_file_or_name(tmp_path):
+    d = tmp_path / "eventlog_v2_app"
+    d.mkdir()
+    (d / "events_1_app").write_bytes(b"one")
+    (d / "appstatus_app").write_bytes(b"")
+    first = sha256_of(d)
+    assert first == sha256_of(d)
+    (d / "events_1_app").write_bytes(b"two")
+    assert sha256_of(d) != first
+    (d / "events_1_app").write_bytes(b"one")
+    (d / "appstatus_app").rename(d / "appstatus_app.inprogress")
+    assert sha256_of(d) != first
+
+
+def test_size_of_a_directory_sums_its_files(tmp_path):
+    d = tmp_path / "eventlog_v2_app"
+    d.mkdir()
+    (d / "a").write_bytes(b"123")
+    (d / "b").write_bytes(b"45")
+    assert size_of(d) == 5
+
+
+def test_log_relpath_by_layout_and_codec(tmp_path):
+    rolling = tmp_path / "eventlog_v2_app-1"
+    rolling.mkdir()
+    assert log_relpath("eventlog-rolling", rolling) == "logs/eventlog-rolling/eventlog_v2_app-1"
+    assert log_relpath("eventlog-zstd", tmp_path / "app-1.zstd") == "logs/eventlog-zstd.zstd"
+    assert log_relpath("pairwise-01", tmp_path / "app-1") == "logs/pairwise-01.ndjson"

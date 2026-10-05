@@ -91,12 +91,13 @@ services:
     # reclaiming an idle executor without this would take its shuffle
     # files with it (FetchFailedException / stage retry) with no external
     # shuffle service configured.
+    # EVENT_LOG_CONF_FLAGS carries the rolling and compression confs (plain
+    # single-file NDJSON unless the run is an event-log scenario).
     command: >
       --master spark://spark-master:7077
       --conf spark.eventLog.enabled=true
       --conf spark.eventLog.dir=/tmp/spark-events
-      --conf spark.eventLog.rolling.enabled=false
-      --conf spark.eventLog.compress=false
+      ${EVENT_LOG_CONF_FLAGS}
       --conf spark.sql.adaptive.enabled=${AQE}
       --conf spark.sql.adaptive.coalescePartitions.enabled=false
       --conf spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}
@@ -114,6 +115,7 @@ services:
       --persist-mode ${PERSIST_MODE}
       --table-format ${TABLE_FORMAT}
       --failure ${FAILURE_MODE}
+      --dml ${DML_MODE}
       --second-action ${SECOND_ACTION}
       --payload-columns ${PAYLOAD_COLUMNS}
       --join-cardinality ${JOIN_CARDINALITY}

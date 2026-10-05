@@ -18,7 +18,7 @@ see [Check the detector tags](#check-the-detector-tags)).
 ## Prerequisites
 
 - Docker (the workload runs on a throwaway Spark standalone cluster) and
-  network access (Spark images, Maven artifacts, the Apache dist listing).
+  network access (Spark images and Maven artifacts).
 - **A sibling `spark-event-corpus-data` git repo**, cloned next to this one:
 
       <parent>/
@@ -41,8 +41,9 @@ All scripts under `scripts/` are meant to be run by hand, not in CI.
 
     pytest
 
-Unit tests only. They cover the matrix, catalog, validation, the detector-tag
-check, and the compose/env contract, and need neither Docker, Node, nor network.
+Unit tests only (CI runs them on every push and pull request). They cover the
+matrix, catalog, validation, the detector-tag check, and the compose/env
+contract, and need neither Docker, Node, nor network.
 
 ## Generate the corpus
 
@@ -65,16 +66,34 @@ To regenerate some runs, delete their entries from `index.json` first; every
 other run is skipped as already done. `--data-repo` writes the logs into a
 different `spark-event-corpus-data` clone than the sibling one.
 
-### Expect 24 generated runs, not 25
+### Pinned Spark versions
+
+`SPARK_VERSIONS` in `src/corpus/versions.py` pins one patch release per minor
+line, and `SCENARIO_SPARK_LINE` picks the line the scenario runs use. Nothing
+resolves versions from the network, so a run never changes because Apache
+published or dropped a release. Baseline ids are keyed by minor line
+(`spark-4.1-parquet-baseline`) and the patch is recorded in the entry's
+`spark_version`: bumping a patch regenerates the same ids, so file names that
+consumers hard-code keep working. Scenario ids (`pairwise-01`, `failure-job`)
+do not carry a version; changing `SCENARIO_SPARK_LINE` means regenerating them
+(delete their catalog entries first).
+
+    python3 scripts/run_generation.py --check-upstream
+
+prints where the pinned set differs from the Apache dist listing (newer patch,
+unpinned minor, pinned patch missing from the listing) and generates nothing.
+
+### Expect 34 generated runs, not 35
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
 three table formats = 12 baselines, plus 7 pairwise scenario runs, 4 failure
-scenario runs and 2 cache scenario runs on the latest version = 25. One of
+scenario runs and 2 cache scenario runs on the scenario line (4.2) = 25, plus 5
+event-log and 5 Delta DML scenario runs (see below) = 35. One of
 those, **Spark 4.2 + Iceberg, is deliberately skipped**: Iceberg has not
 published a Spark 4.2 runtime artifact yet, so there is nothing to run
 against. The script prints
 `SKIPPED: ... no upstream table-format artifact available yet` and continues.
-A 24-of-25 count is the expected outcome, not a failure. It becomes 25 on its
+A 34-of-35 count is the expected outcome, not a failure. It becomes 35 on its
 own once upstream Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
 `src/corpus/table_formats.py` gains a `4.2` to `iceberg` entry.
 
@@ -216,6 +235,62 @@ exit code 137 from the killed run and 0 from every other, so a scenario that
 stops failing as designed breaks generation instead of producing a quietly
 wrong log.
 
+## The event-log scenarios
+
+Every other run pins `spark.eventLog.rolling.enabled` and
+`spark.eventLog.compress` to false, so the corpus ships plain single-file
+NDJSON. A Spark 4 cluster writes neither: its logs are rolled into a directory
+and zstd-compressed. Five more runs on the scenario line keep what Spark wrote
+(`EVENT_LOG_SCENARIOS` in `src/corpus/matrix.py`), so the readers for each
+encoding have a real log to test against.
+
+| Run | Layout | Compression |
+|---|---|---|
+| `eventlog-spark4-default` | rolling directory | zstd (Spark's defaults, only the roll size set) |
+| `eventlog-rolling` | rolling directory | none |
+| `eventlog-zstd` | single file | zstd |
+| `eventlog-lz4` | single file | lz4 |
+| `eventlog-snappy` | single file | snappy |
+
+Each runs the baseline workload at 1000 shuffle partitions, about 8 MB of
+plain events. The rolling runs set `spark.eventLog.rolling.maxFileSize=2m`, the
+minimum, which counts uncompressed bytes, so the log spans four or five
+`events_N_*` files whatever the codec.
+
+They are stored as produced. A compressed file is `logs/<id>.<codec suffix>`
+and a rolling log is the `eventlog_v2_<app>` directory under `logs/<id>/`; the
+catalog entry's `path` points at it, and `log_layout` (`single-file` or
+`rolling-dir`) and `compression` record the encoding. Entries for plain logs
+have neither field. A directory's `checksum` is the SHA-256 of a sorted list of
+each file's relative path and SHA-256, not of any one file. `validate_event_log`
+in `src/corpus/validate.py` checks all of these (it decodes zstd, lz4 and
+snappy with `cramjam`, using the framing of the JVM libraries Spark wraps them
+in); `validate_ndjson_event_log` accepts plain text only.
+
+These runs target no detectors, so they add nothing to the tag counts above.
+
+## The Delta DML scenarios
+
+Five runs on the scenario line give the corpus Delta write statements beyond
+the baseline overwrite. Each seeds a Delta table of 1M rows
+(partitioned by `bucket`, 4 buckets) and runs DML against it
+(`DML_SCENARIOS` in `src/corpus/matrix.py`, `--dml` in
+`workload/generate_events.py`). Each run checks the table's row counts at the
+end, so a statement that silently did nothing fails the run.
+
+| Run | Statement |
+|---|---|
+| `delta-merge-sql` | `MERGE INTO ... USING` a temp view, update matched, insert unmatched |
+| `delta-merge-api` | the same merge through `DeltaTable.merge` |
+| `delta-update` | `UPDATE ... WHERE id % 10 = 0` |
+| `delta-delete` | `DeltaTable.delete("id % 4 = 0")` |
+| `delta-concurrent-merge` | two threads of one session merge buckets 0 and 1 at once |
+
+In the concurrent run each merge's `ON` clause pins its own partition, so the
+two transactions touch disjoint files and both commit; the jobs carry the
+descriptions `merge bucket 0` and `merge bucket 1`, and their file-scan phases
+overlap in the log. These runs target no detectors.
+
 ## The cache scenarios
 
 Two more standalone runs give the cache-storage detector (`CSTOR`) logs that
@@ -223,8 +298,8 @@ record where each cached partition was stored (`CACHE_SCENARIOS` in
 `src/corpus/matrix.py`). Each is the baseline config with the fact table
 persisted, read by a second action after the join (`--second-action reread`),
 under `storage_pressure`: the `STORAGE_PRESSURE_CONFS` in
-`src/corpus/orchestration.py` shrink unified memory so the table no longer
-fits, and set `spark.eventLog.logBlockUpdates.enabled=true`. Without that flag
+`src/corpus/orchestration.py` shrink unified memory below what the table
+needs, and set `spark.eventLog.logBlockUpdates.enabled=true`. Without that flag
 the log has no `SparkListenerBlockUpdated` events, and the cache fields of
 `RDD Info` that modern Spark writes are always 0, so no other log in the corpus
 says what was cached.
@@ -233,3 +308,7 @@ says what was cached.
 |---|---|---|
 | `cache-memory-only` | `MEMORY_ONLY` | partitions that do not fit are dropped, so only some stay cached |
 | `cache-memory-and-disk` | `MEMORY_AND_DISK` | partitions that do not fit are written to disk instead |
+
+## License
+
+MIT, see [LICENSE](LICENSE). The generated logs live in the data repo and carry their own terms.

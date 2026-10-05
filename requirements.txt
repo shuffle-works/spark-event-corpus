@@ -1,2 +1,3 @@
 pytest>=8
 pyyaml>=6
+cramjam>=2.8

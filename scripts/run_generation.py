@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Runs the full baseline + pairwise generation matrix, plus the standalone
-failure and cache scenarios, end-to-end: resolve
-versions -> run each baseline/scenario via Docker Compose -> validate the
-produced log -> copy it into the data repo -> append a catalog entry.
+failure, cache, event-log and Delta DML scenarios, end-to-end: take the pinned Spark versions
+(src/corpus/versions.py) -> run each baseline/scenario via Docker Compose ->
+validate the produced log -> copy it into the data repo -> append a catalog entry.
 Committing/tagging the data repo happens once, by hand, after this finishes
 (see the plan's Task 11), not per-run.
 """
@@ -18,13 +18,27 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from corpus.catalog import append_entry, load_catalog, sha256_of
-from corpus.matrix import Run, baseline_runs, cache_runs, failure_runs, pairwise_runs
+from corpus.catalog import append_entry, load_catalog, log_relpath, sha256_of, size_of
+from corpus.matrix import (
+    Run,
+    baseline_runs,
+    cache_runs,
+    dml_runs,
+    event_log_runs,
+    failure_runs,
+    pairwise_runs,
+)
 from corpus.orchestration import compose_services_for, env_for_run, expected_submit_exit_code
 from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import generation_tag_for
-from corpus.validate import validate_ndjson_event_log
-from corpus.versions import resolve_versions
+from corpus.validate import log_layout, validate_event_log
+from corpus.versions import (
+    SPARK_VERSIONS,
+    VersionResolutionError,
+    resolve_versions,
+    scenario_spark_version,
+    upstream_report,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_REPO = REPO_ROOT.parent / "spark-event-corpus-data"
@@ -74,21 +88,27 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
         # doesn't leak this directory either.
         shutil.rmtree(workload_output_dir, ignore_errors=True)
 
-    produced = [p for p in event_log_dir.glob("*") if p.is_file()]
+    # One file, or one eventlog_v2_<app> directory for a rolling log.
+    produced = list(event_log_dir.glob("*"))
     if len(produced) != 1:
         raise RuntimeError(f"expected exactly one event log in {event_log_dir}, found {produced}")
     return produced[0]
 
 
 def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
-    validate_ndjson_event_log(log_file)
-    dest = data_repo / "logs" / f"{run.id}.ndjson"
+    validate_event_log(log_file)
+    relpath = log_relpath(run.id, log_file)
+    dest = data_repo / relpath
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(log_file, dest)
+    if log_file.is_dir():
+        shutil.copytree(log_file, dest, dirs_exist_ok=True)
+    else:
+        shutil.copy(log_file, dest)
+    layout = log_layout(dest)
     entry = {
         "id": run.id,
         "data_repo_tag": tag,
-        "path": f"logs/{dest.name}",
+        "path": relpath,
         "checksum": sha256_of(dest),
         "source": "self-generated",
         "spark_version": run.spark_version,
@@ -98,9 +118,21 @@ def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
         "targets_detectors": run.targets_detectors,
         **({"known_misses": run.known_misses} if run.known_misses else {}),
         "generated_at": tag[1:],
-        "size_bytes": dest.stat().st_size,
+        "size_bytes": size_of(dest),
+        # Recorded only for logs that are not one plain file; entries for plain
+        # logs omit both fields.
+        **({"log_layout": layout["layout"], "compression": layout["compression"]}
+           if layout != {"layout": "single-file", "compression": "none"} else {}),
     }
     append_entry(CATALOG_PATH, entry)
+
+
+def check_upstream() -> None:
+    try:
+        lines = upstream_report(SPARK_VERSIONS, resolve_versions())
+    except VersionResolutionError as exc:
+        sys.exit(str(exc))
+    print("\n".join(lines) if lines else "pinned Spark versions match the upstream listing")
 
 
 def main() -> None:
@@ -116,7 +148,15 @@ def main() -> None:
         "--data-repo", type=Path, default=DEFAULT_DATA_REPO,
         help="spark-event-corpus-data clone to write the logs into (default: sibling of this repo)",
     )
+    parser.add_argument(
+        "--check-upstream", action="store_true",
+        help="print how the pinned Spark versions differ from the Apache dist listing and "
+        "exit; generates nothing",
+    )
     args = parser.parse_args()
+    if args.check_upstream:
+        check_upstream()
+        return
     # generated_at is derived from the tag, so it has to be a dated one.
     if args.tag and not re.fullmatch(r"v\d{4}-\d{2}-\d{2}", args.tag):
         parser.error(f"--tag must look like v2026-09-24, got {args.tag!r}")
@@ -127,10 +167,14 @@ def main() -> None:
     # by hand.
     tag = args.tag or generation_tag_for(CATALOG_PATH)
 
-    versions = [str(v) for v in resolve_versions()]
-    latest = versions[-1]
+    scenario_version = scenario_spark_version()
     runs: list[Run] = (
-        baseline_runs(versions) + pairwise_runs(latest) + failure_runs(latest) + cache_runs(latest)
+        baseline_runs(SPARK_VERSIONS)
+        + pairwise_runs(scenario_version)
+        + failure_runs(scenario_version)
+        + cache_runs(scenario_version)
+        + event_log_runs(scenario_version)
+        + dml_runs(scenario_version)
     )
 
     # Restarts must not re-attempt runs a prior invocation already finished
