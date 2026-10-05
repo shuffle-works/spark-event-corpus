@@ -41,8 +41,9 @@ All scripts under `scripts/` are meant to be run by hand, not in CI.
 
     pytest
 
-Unit tests only (CI runs them on every push and pull request). They cover the matrix, catalog, validation, the detector-tag
-check, and the compose/env contract, and need neither Docker, Node, nor network.
+Unit tests only (CI runs them on every push and pull request). They cover the
+matrix, catalog, validation, the detector-tag check, and the compose/env
+contract, and need neither Docker, Node, nor network.
 
 ## Generate the corpus
 
