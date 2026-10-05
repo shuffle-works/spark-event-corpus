@@ -384,7 +384,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "MEM",
@@ -395,9 +395,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-3.5.9-parquet-baseline",
-    "path": "logs/spark-3.5.9-parquet-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-3.5-parquet-baseline",
+    "path": "logs/spark-3.5-parquet-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2211605,
     "source": "self-generated",
@@ -416,7 +416,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -427,9 +427,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-3.5.9-delta-baseline",
-    "path": "logs/spark-3.5.9-delta-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-3.5-delta-baseline",
+    "path": "logs/spark-3.5-delta-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2252319,
     "source": "self-generated",
@@ -448,7 +448,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -459,9 +459,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-3.5.9-iceberg-baseline",
-    "path": "logs/spark-3.5.9-iceberg-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-3.5-iceberg-baseline",
+    "path": "logs/spark-3.5-iceberg-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2166891,
     "source": "self-generated",
@@ -480,7 +480,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -492,9 +492,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.0.4-parquet-baseline",
-    "path": "logs/spark-4.0.4-parquet-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.0-parquet-baseline",
+    "path": "logs/spark-4.0-parquet-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2278530,
     "source": "self-generated",
@@ -513,7 +513,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -524,9 +524,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.0.4-delta-baseline",
-    "path": "logs/spark-4.0.4-delta-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.0-delta-baseline",
+    "path": "logs/spark-4.0-delta-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2469700,
     "source": "self-generated",
@@ -545,7 +545,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -556,9 +556,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.0.4-iceberg-baseline",
-    "path": "logs/spark-4.0.4-iceberg-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.0-iceberg-baseline",
+    "path": "logs/spark-4.0-iceberg-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2271640,
     "source": "self-generated",
@@ -577,7 +577,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -588,9 +588,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.1.3-parquet-baseline",
-    "path": "logs/spark-4.1.3-parquet-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.1-parquet-baseline",
+    "path": "logs/spark-4.1-parquet-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2244827,
     "source": "self-generated",
@@ -609,7 +609,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "MEM",
@@ -617,9 +617,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.1.3-delta-baseline",
-    "path": "logs/spark-4.1.3-delta-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.1-delta-baseline",
+    "path": "logs/spark-4.1-delta-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2450890,
     "source": "self-generated",
@@ -638,7 +638,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "GC",
@@ -647,9 +647,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.1.3-iceberg-baseline",
-    "path": "logs/spark-4.1.3-iceberg-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.1-iceberg-baseline",
+    "path": "logs/spark-4.1-iceberg-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2267436,
     "source": "self-generated",
@@ -668,7 +668,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "MEM",
@@ -677,9 +677,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.2.0-parquet-baseline",
-    "path": "logs/spark-4.2.0-parquet-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.2-parquet-baseline",
+    "path": "logs/spark-4.2-parquet-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2276725,
     "source": "self-generated",
@@ -698,7 +698,7 @@
       "slow_host": false,
       "speculation": false
     },
-    "data_repo_tag": "v2026-09-06",
+    "data_repo_tag": "v2026-10-06",
     "fires_detectors": [
       "CFG",
       "MEM",
@@ -706,9 +706,9 @@
       "UTIL"
     ],
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
-    "generated_at": "2026-09-06",
-    "id": "spark-4.2.0-delta-baseline",
-    "path": "logs/spark-4.2.0-delta-baseline.ndjson",
+    "generated_at": "2026-10-06",
+    "id": "spark-4.2-delta-baseline",
+    "path": "logs/spark-4.2-delta-baseline.ndjson",
     "scenario": "baseline",
     "size_bytes": 2429174,
     "source": "self-generated",
