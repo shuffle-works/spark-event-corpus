@@ -366,3 +366,67 @@ def cache_runs(latest_version: str) -> list[Run]:
         )
         for t in CACHE_SCENARIOS
     ]
+
+
+# Spark 4 writes event logs rolled into a directory and zstd-compressed unless
+# told otherwise, which is what a Spark 4 cluster's logs look like; every other
+# run pins both off (DEFAULT_EVENT_LOG_CONFS in src/corpus/orchestration.py).
+# These runs keep what Spark wrote, so the readers for each encoding have a
+# real log. event_log_confs is the complete set of event-log confs for the run.
+# Rolling needs a log over spark.eventLog.rolling.maxFileSize, whose minimum is
+# 2m and which counts uncompressed bytes: 1000 shuffle partitions give about 8
+# MB, so the rolled logs span several files whatever the codec.
+EVENT_LOG_ROLL_SIZE = {"spark.eventLog.rolling.maxFileSize": "2m"}
+EVENT_LOG_CONFIG = {**BASELINE_CONFIG, "shuffle_partitions": 1000}
+
+
+def _single_file(codec: str) -> dict[str, str]:
+    return {
+        "spark.eventLog.rolling.enabled": "false",
+        "spark.eventLog.compress": "true",
+        "spark.eventLog.compression.codec": codec,
+    }
+
+
+EVENT_LOG_SCENARIOS: list[ScenarioTemplate] = [
+    # Nothing overridden but the roll size: Spark 4's own default encoding.
+    ScenarioTemplate(
+        id="eventlog-spark4-default",
+        config={**EVENT_LOG_CONFIG, "event_log_confs": dict(EVENT_LOG_ROLL_SIZE)},
+        targets_detectors=[],
+    ),
+    ScenarioTemplate(
+        id="eventlog-rolling",
+        config={
+            **EVENT_LOG_CONFIG,
+            "event_log_confs": {
+                "spark.eventLog.rolling.enabled": "true",
+                "spark.eventLog.compress": "false",
+                **EVENT_LOG_ROLL_SIZE,
+            },
+        },
+        targets_detectors=[],
+    ),
+    *[
+        ScenarioTemplate(
+            id=f"eventlog-{codec}",
+            config={**EVENT_LOG_CONFIG, "event_log_confs": _single_file(codec)},
+            targets_detectors=[],
+        )
+        for codec in ("zstd", "lz4", "snappy")
+    ],
+]
+
+
+def event_log_runs(latest_version: str) -> list[Run]:
+    return [
+        Run(
+            id=t.id,
+            spark_version=latest_version,
+            table_format="parquet",
+            scenario=t.id,
+            config=t.config,
+            targets_detectors=t.targets_detectors,
+        )
+        for t in EVENT_LOG_SCENARIOS
+    ]

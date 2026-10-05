@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Runs the full baseline + pairwise generation matrix, plus the standalone
-failure and cache scenarios, end-to-end: take the pinned Spark versions
+failure, cache and event-log scenarios, end-to-end: take the pinned Spark versions
 (src/corpus/versions.py) -> run each baseline/scenario via Docker Compose ->
 validate the produced log -> copy it into the data repo -> append a catalog entry.
 Committing/tagging the data repo happens once, by hand, after this finishes
@@ -18,12 +18,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from corpus.catalog import append_entry, load_catalog, sha256_of
-from corpus.matrix import Run, baseline_runs, cache_runs, failure_runs, pairwise_runs
+from corpus.catalog import append_entry, load_catalog, log_relpath, sha256_of, size_of
+from corpus.matrix import (
+    Run,
+    baseline_runs,
+    cache_runs,
+    event_log_runs,
+    failure_runs,
+    pairwise_runs,
+)
 from corpus.orchestration import compose_services_for, env_for_run, expected_submit_exit_code
 from corpus.table_formats import UnknownTableFormatMapping
 from corpus.tagging import generation_tag_for
-from corpus.validate import validate_ndjson_event_log
+from corpus.validate import log_layout, validate_event_log
 from corpus.versions import (
     SPARK_VERSIONS,
     VersionResolutionError,
@@ -80,21 +87,27 @@ def run_one(run: Run, event_log_dir: Path, workload_output_dir: Path) -> Path:
         # doesn't leak this directory either.
         shutil.rmtree(workload_output_dir, ignore_errors=True)
 
-    produced = [p for p in event_log_dir.glob("*") if p.is_file()]
+    # One file, or one eventlog_v2_<app> directory for a rolling log.
+    produced = list(event_log_dir.glob("*"))
     if len(produced) != 1:
         raise RuntimeError(f"expected exactly one event log in {event_log_dir}, found {produced}")
     return produced[0]
 
 
 def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
-    validate_ndjson_event_log(log_file)
-    dest = data_repo / "logs" / f"{run.id}.ndjson"
+    validate_event_log(log_file)
+    relpath = log_relpath(run.id, log_file)
+    dest = data_repo / relpath
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(log_file, dest)
+    if log_file.is_dir():
+        shutil.copytree(log_file, dest, dirs_exist_ok=True)
+    else:
+        shutil.copy(log_file, dest)
+    layout = log_layout(dest)
     entry = {
         "id": run.id,
         "data_repo_tag": tag,
-        "path": f"logs/{dest.name}",
+        "path": relpath,
         "checksum": sha256_of(dest),
         "source": "self-generated",
         "spark_version": run.spark_version,
@@ -104,7 +117,11 @@ def commit_run(run: Run, log_file: Path, tag: str, data_repo: Path) -> None:
         "targets_detectors": run.targets_detectors,
         **({"known_misses": run.known_misses} if run.known_misses else {}),
         "generated_at": tag[1:],
-        "size_bytes": dest.stat().st_size,
+        "size_bytes": size_of(dest),
+        # Recorded only for logs that are not one plain file, which is every
+        # entry written before the event-log scenarios existed.
+        **({"log_layout": layout["layout"], "compression": layout["compression"]}
+           if layout != {"layout": "single-file", "compression": "none"} else {}),
     }
     append_entry(CATALOG_PATH, entry)
 
@@ -131,6 +148,10 @@ def main() -> None:
         help="spark-event-corpus-data clone to write the logs into (default: sibling of this repo)",
     )
     parser.add_argument(
+        "--only", nargs="+", metavar="ID",
+        help="run only these ids (e.g. eventlog-zstd); the rest are left alone, not skipped",
+    )
+    parser.add_argument(
         "--check-upstream", action="store_true",
         help="print how the pinned Spark versions differ from the Apache dist listing and "
         "exit; generates nothing",
@@ -155,6 +176,7 @@ def main() -> None:
         + pairwise_runs(scenario_version)
         + failure_runs(scenario_version)
         + cache_runs(scenario_version)
+        + event_log_runs(scenario_version)
     )
 
     # Restarts must not re-attempt runs a prior invocation already finished
@@ -162,6 +184,12 @@ def main() -> None:
     # which would otherwise crash the whole script on the first repeat.
     # Loaded once per invocation, not per run, since a run can commit to the
     # catalog mid-loop.
+    if args.only:
+        unknown = set(args.only) - {run.id for run in runs}
+        if unknown:
+            parser.error(f"--only names no known run: {', '.join(sorted(unknown))}")
+        runs = [run for run in runs if run.id in args.only]
+
     already_done = {entry["id"] for entry in load_catalog(CATALOG_PATH)}
 
     for run in runs:

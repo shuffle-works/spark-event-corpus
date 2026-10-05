@@ -42,6 +42,20 @@ STORAGE_PRESSURE_CONFS = {
 }
 
 
+# The event-log confs every run gets unless its config sets event_log_confs:
+# plain, single-file NDJSON, which is what the corpus has always shipped. Spark
+# 4 turns both on by default, so the event-log scenarios override this.
+DEFAULT_EVENT_LOG_CONFS = {
+    "spark.eventLog.rolling.enabled": "false",
+    "spark.eventLog.compress": "false",
+}
+
+
+def event_log_flags_for(run: Run) -> str:
+    confs = run.config.get("event_log_confs", DEFAULT_EVENT_LOG_CONFS)
+    return " ".join(f"--conf {key}={value}" for key, value in confs.items())
+
+
 def failure_mode_for(run: Run) -> str:
     return run.config.get("failure", "none")
 
@@ -124,6 +138,7 @@ def env_for_run(run: Run, event_log_dir: Path, workload_output_dir: Path) -> dic
         "PERSIST_MODE": run.config["caching"],
         "FAILURE_MODE": failure_mode_for(run),
         "SECOND_ACTION": second_action_for(run),
+        "EVENT_LOG_CONF_FLAGS": event_log_flags_for(run),
         "SCENARIO_CONF_FLAGS": scenario_confs_for(run),
         "TABLE_FORMAT": run.table_format,
         "ROW_COUNT": str(run.config.get("row_count", DEFAULT_ROW_COUNT)),

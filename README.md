@@ -82,16 +82,17 @@ do not carry a version; changing `SCENARIO_SPARK_LINE` means regenerating them
 prints where the pinned set differs from the Apache dist listing (newer patch,
 unpinned minor, pinned patch no longer listed) and generates nothing.
 
-### Expect 24 generated runs, not 25
+### Expect 29 generated runs, not 30
 
 `run_generation.py` covers four Spark minor lines (3.5, 4.0, 4.1, 4.2) times
 three table formats = 12 baselines, plus 7 pairwise scenario runs, 4 failure
-scenario runs and 2 cache scenario runs on the scenario line (4.2) = 25. One of
+scenario runs and 2 cache scenario runs on the scenario line (4.2) = 25, plus 5
+event-log scenario runs (see below) = 30. One of
 those, **Spark 4.2 + Iceberg, is deliberately skipped**: Iceberg has not
 published a Spark 4.2 runtime artifact yet, so there is nothing to run
 against. The script prints
 `SKIPPED: ... no upstream table-format artifact available yet` and continues.
-A 24-of-25 count is the expected outcome, not a failure. It becomes 25 on its
+A 29-of-30 count is the expected outcome, not a failure. It becomes 30 on its
 own once upstream Iceberg ships that artifact and `TABLE_FORMAT_ARTIFACTS` in
 `src/corpus/table_formats.py` gains a `4.2` to `iceberg` entry.
 
@@ -232,6 +233,41 @@ if an injected failure does not fail its job, and `run_generation.py` expects
 exit code 137 from the killed run and 0 from every other, so a scenario that
 stops failing as designed breaks generation instead of producing a quietly
 wrong log.
+
+## The event-log scenarios
+
+Every other run pins `spark.eventLog.rolling.enabled` and
+`spark.eventLog.compress` to false, so the corpus ships plain single-file
+NDJSON. A Spark 4 cluster writes neither: its logs are rolled into a directory
+and zstd-compressed. Five more runs on the scenario line keep what Spark wrote
+(`EVENT_LOG_SCENARIOS` in `src/corpus/matrix.py`), so the readers for each
+encoding have a real log to test against.
+
+| Run | Layout | Compression |
+|---|---|---|
+| `eventlog-spark4-default` | rolling directory | zstd (Spark's defaults, only the roll size set) |
+| `eventlog-rolling` | rolling directory | none |
+| `eventlog-zstd` | single file | zstd |
+| `eventlog-lz4` | single file | lz4 |
+| `eventlog-snappy` | single file | snappy |
+
+Each runs the baseline workload at 1000 shuffle partitions, about 8 MB of
+plain events. The rolling runs set `spark.eventLog.rolling.maxFileSize=2m`, the
+minimum, which counts uncompressed bytes, so the log spans four or five
+`events_N_*` files whatever the codec.
+
+They are stored as produced. A compressed file is `logs/<id>.<codec suffix>`
+and a rolling log is the `eventlog_v2_<app>` directory under `logs/<id>/`; the
+catalog entry's `path` points at it, and `log_layout` (`single-file` or
+`rolling-dir`) and `compression` record the encoding. Entries for plain logs
+have neither field. A directory's `checksum` is the SHA-256 of a sorted list of
+each file's relative path and SHA-256, not of any one file. `validate_event_log`
+in `src/corpus/validate.py` checks all of these (it decodes zstd, lz4 and
+snappy with `cramjam`, using the framing of the JVM libraries Spark wraps them
+in); `validate_ndjson_event_log` still accepts plain text only.
+
+These runs target no detectors, so they add nothing to the tag counts above.
+`--only <id>...` runs just the named ids.
 
 ## The cache scenarios
 

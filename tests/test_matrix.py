@@ -1,11 +1,13 @@
 from corpus.matrix import (
     BASELINE_CONFIG,
+    EVENT_LOG_SCENARIOS,
     COLD_START_DELAY_S,
     CACHE_SCENARIOS,
     FAILURE_SCENARIOS,
     PAIRWISE_SCENARIOS,
     baseline_runs,
     cache_runs,
+    event_log_runs,
     failure_runs,
     pairwise_runs,
 )
@@ -140,3 +142,26 @@ def test_cache_runs_fills_in_latest_version():
     runs = cache_runs("4.2.0")
     assert [r.id for r in runs] == [s.id for s in CACHE_SCENARIOS]
     assert all(r.spark_version == "4.2.0" and r.table_format == "parquet" for r in runs)
+
+
+def test_event_log_scenarios_cover_every_codec_and_the_rolled_layouts():
+    by_id = {s.id: s.config["event_log_confs"] for s in EVENT_LOG_SCENARIOS}
+    assert set(by_id) == {
+        "eventlog-spark4-default", "eventlog-rolling",
+        "eventlog-zstd", "eventlog-lz4", "eventlog-snappy",
+    }
+    for codec in ("zstd", "lz4", "snappy"):
+        assert by_id[f"eventlog-{codec}"]["spark.eventLog.compression.codec"] == codec
+        assert by_id[f"eventlog-{codec}"]["spark.eventLog.rolling.enabled"] == "false"
+    # The default run leaves rolling and compression to Spark; the rolled runs set a roll size.
+    assert "spark.eventLog.rolling.enabled" not in by_id["eventlog-spark4-default"]
+    assert "spark.eventLog.compress" not in by_id["eventlog-spark4-default"]
+    assert by_id["eventlog-rolling"]["spark.eventLog.rolling.enabled"] == "true"
+    assert "spark.eventLog.rolling.maxFileSize" in by_id["eventlog-rolling"]
+
+
+def test_event_log_runs_use_the_scenario_version_and_target_no_detectors():
+    runs = event_log_runs("4.2.0")
+    assert len(runs) == 5
+    assert all(r.spark_version == "4.2.0" and r.table_format == "parquet" for r in runs)
+    assert all(r.targets_detectors == [] for r in runs)

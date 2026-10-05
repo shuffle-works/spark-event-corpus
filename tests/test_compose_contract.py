@@ -59,10 +59,6 @@ def test_hard_won_conf_flags_are_still_present():
     for flag in (
         # Ivy's cache must point somewhere writable: the spark user has no HOME.
         "spark.jars.ivy=",
-        # Spark 4.x rolling event logs produce a directory, not one NDJSON file.
-        "spark.eventLog.rolling.enabled=false",
-        # Compressed event logs are not the plain-text NDJSON the corpus ships.
-        "spark.eventLog.compress=false",
         # Without this every join broadcasts and no shuffle is ever produced.
         "spark.sql.autoBroadcastJoinThreshold=-1",
         # Without this, AQE erases the real shuffle's partition count back
@@ -73,6 +69,14 @@ def test_hard_won_conf_flags_are_still_present():
         "spark.dynamicAllocation.shuffleTracking.enabled=true",
     ):
         assert flag in command_lines, flag
+
+
+def test_plain_ndjson_event_log_is_the_default():
+    """Spark 4 rolls and compresses event logs by default; only the event-log
+    scenarios may opt in, so every other run keeps the single plain file."""
+    flags = env_for_run(representative_run(), Path("/tmp/x"), Path("/tmp/y"))["EVENT_LOG_CONF_FLAGS"]
+    assert "--conf spark.eventLog.rolling.enabled=false" in flags
+    assert "--conf spark.eventLog.compress=false" in flags
 
 
 WORKER_CORES = {"spark-worker-1": "2", "spark-worker-2": "${WORKER_2_CORES}", "spark-worker-3": "2"}

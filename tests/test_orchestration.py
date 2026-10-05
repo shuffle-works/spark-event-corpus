@@ -6,6 +6,7 @@ from corpus.orchestration import (
     KILLED_RUN_EXIT_CODE,
     compose_services_for,
     env_for_run,
+    event_log_flags_for,
     expected_submit_exit_code,
     extra_confs_for,
     packages_for,
@@ -129,3 +130,14 @@ def test_storage_pressure_logs_block_updates_and_shrinks_storage_memory():
     assert env["SCENARIO_CONF_FLAGS"] == flags
     assert env["SECOND_ACTION"] == "reread"
     assert env["PERSIST_MODE"] == "memory-and-disk"
+
+
+def test_event_log_flags_default_to_plain_single_file():
+    assert event_log_flags_for(make_run()) == (
+        "--conf spark.eventLog.rolling.enabled=false --conf spark.eventLog.compress=false"
+    )
+
+
+def test_event_log_flags_use_the_runs_own_confs_when_set():
+    run = make_run(event_log_confs={"spark.eventLog.compression.codec": "lz4"})
+    assert event_log_flags_for(run) == "--conf spark.eventLog.compression.codec=lz4"
