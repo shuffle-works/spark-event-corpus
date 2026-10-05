@@ -265,7 +265,7 @@ have neither field. A directory's `checksum` is the SHA-256 of a sorted list of
 each file's relative path and SHA-256, not of any one file. `validate_event_log`
 in `src/corpus/validate.py` checks all of these (it decodes zstd, lz4 and
 snappy with `cramjam`, using the framing of the JVM libraries Spark wraps them
-in); `validate_ndjson_event_log` still accepts plain text only.
+in); `validate_ndjson_event_log` accepts plain text only.
 
 These runs target no detectors, so they add nothing to the tag counts above.
 
