@@ -233,3 +233,7 @@ says what was cached.
 |---|---|---|
 | `cache-memory-only` | `MEMORY_ONLY` | partitions that do not fit are dropped, so only some stay cached |
 | `cache-memory-and-disk` | `MEMORY_AND_DISK` | partitions that do not fit are written to disk instead |
+
+## License
+
+MIT, see [LICENSE](LICENSE). The generated logs live in the data repo and carry their own terms.
