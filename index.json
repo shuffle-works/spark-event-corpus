@@ -815,7 +815,7 @@
     "id": "pairwise-02",
     "known_misses": {
       "CSTOR": "caching is all or nothing: all 20 of 20 partitions of the persisted fact table stay cached (653 MB), per block updates; CSTOR needs some but under 90% of partitions cached",
-      "SKEW": "join stage P95/median of 2.5 against a floor of 3 (2.60 to 2.88 in earlier runs); the one hot key is a single task of 2000, below P95"
+      "SKEW": "join stage P95/median stays under the floor of 3; the one hot key is a single task of 2000, below P95"
     },
     "path": "logs/pairwise-02.ndjson",
     "scenario": "pairwise-02",
@@ -870,8 +870,8 @@
     "generated_at": "2026-10-15",
     "id": "pairwise-03",
     "known_misses": {
-      "SPEC": "no speculative attempt launched in this log; in two earlier runs 6 speculative copies won in the final 2000-task join stage, but the killed original attempts have no TaskEnd event in the log at all, so even the fixed parser has no loser to count (floor: 5 losers and 60 s in one stage)",
-      "STRAG": "on its floor (more than 2.5% of a stage's tasks straggling, with waste above 0.5% of the run): it fired in this log (20% of the first 20-task map stage straggled) but depends on the slow worker registering in time for the first map stage, and missed in 1 of 7 earlier runs"
+      "SPEC": "no loser is counted (floor: 5 losers and 60 s in one stage): the killed original attempts of speculated tasks have no TaskEnd event in the log, so the parser has no loser to count",
+      "STRAG": "on its floor (more than 2.5% of a stage's tasks straggling, with waste above 0.5% of the run): it fires, but only when the slow worker registers in time for the first map stage"
     },
     "path": "logs/pairwise-03.ndjson",
     "scenario": "pairwise-03",
@@ -983,7 +983,7 @@
     "generated_at": "2026-10-15",
     "id": "pairwise-05",
     "known_misses": {
-      "SPEC": "one speculative attempt and no counted loser in this log (one 0.5 s loser in an earlier run), against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's"
+      "SPEC": "no counted loser, against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's"
     },
     "path": "logs/pairwise-05.ndjson",
     "scenario": "pairwise-05",
@@ -1034,6 +1034,7 @@
     "fires_detectors_checked_with": "sparkforensics-cli@0.2.4",
     "generated_at": "2026-10-15",
     "id": "pairwise-06",
+    "known_misses": {},
     "path": "logs/pairwise-06.ndjson",
     "scenario": "pairwise-06",
     "size_bytes": 17132290,
@@ -1092,7 +1093,7 @@
     "id": "pairwise-07",
     "known_misses": {
       "CSTOR": "caching is all or nothing: none of the 20 partitions of the persisted fact table is cached (no rdd_* block update at all), because at spark.memory.fraction=0.02 each partition is larger than storage memory; CSTOR needs some but under 90% of partitions cached",
-      "SPEC": "no speculative attempt launched in any of 3 runs: with no slow host and no skew, no task lags far enough behind the stage's median to be copied"
+      "SPEC": "no counted loser, against a floor of 5 losers and 60 s; with no slow host and no injected skew, no task lags far enough behind the stage's median to be copied"
     },
     "path": "logs/pairwise-07.ndjson",
     "scenario": "pairwise-07",

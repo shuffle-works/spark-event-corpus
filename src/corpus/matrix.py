@@ -160,8 +160,8 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
         ),
         targets_detectors=["PART", "TINY", "UTIL", "COLD", "CACHE"],
         known_misses={
-            "SKEW": "join stage P95/median of 2.5 against a floor of 3 (2.60 to 2.88 in "
-            "earlier runs); the one hot key is a single task of 2000, below P95",
+            "SKEW": "join stage P95/median stays under the floor of 3; the one hot key is a "
+            "single task of 2000, below P95",
             "CSTOR": CSTOR_FITS_WHOLE.format(size="653 MB"),
         },
     ),
@@ -180,14 +180,12 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
         ),
         targets_detectors=["PART", "TINY", "UTIL", "COLD", "HOST"],
         known_misses={
-            "SPEC": "no speculative attempt launched in this log; in two earlier runs 6 "
-            "speculative copies won in the final 2000-task join stage, but the killed "
-            "original attempts have no TaskEnd event in the log at all, so even the fixed "
-            "parser has no loser to count (floor: 5 losers and 60 s in one stage)",
+            "SPEC": "no loser is counted (floor: 5 losers and 60 s in one stage): the killed "
+            "original attempts of speculated tasks have no TaskEnd event in the log, so "
+            "the parser has no loser to count",
             "STRAG": "on its floor (more than 2.5% of a stage's tasks straggling, with "
-            "waste above 0.5% of the run): it fired in this log (20% of the first "
-            "20-task map stage straggled) but depends on the slow worker registering in "
-            "time for the first map stage, and missed in 1 of 7 earlier runs",
+            "waste above 0.5% of the run): it fires, but only when the slow worker "
+            "registers in time for the first map stage",
         },
     ),
     ScenarioTemplate(
@@ -221,9 +219,8 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
         ),
         targets_detectors=["SHFL", "SPILL", "UTIL", "COLD", "SKEW"],
         known_misses={
-            "SPEC": "one speculative attempt and no counted loser in this log (one 0.5 s "
-            "loser in an earlier run), against a floor of 5 losers and 60 s; with no "
-            "slow host the only slow task is the hot key's",
+            "SPEC": "no counted loser, against a floor of 5 losers and 60 s; with no slow "
+            "host the only slow task is the hot key's",
         },
     ),
     ScenarioTemplate(
@@ -252,9 +249,9 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
         ),
         targets_detectors=["SHFL", "SPILL", "PART", "TINY", "CACHE"],
         known_misses={
-            "SPEC": "no speculative attempt launched in any of 3 runs: with no slow "
-            "host and no skew, no task lags far enough behind the stage's median to be "
-            "copied",
+            "SPEC": "no counted loser, against a floor of 5 losers and 60 s; with no slow "
+            "host and no injected skew, no task lags far enough behind the stage's "
+            "median to be copied",
             "CSTOR": CSTOR_FITS_NOTHING,
         },
     ),

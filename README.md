@@ -198,12 +198,12 @@ killed speculative attempts that end after their stage (#71) and reads
 |---|---|---|
 | 01, 02 | `CSTOR` | caching is all or nothing: all 20 of 20 partitions of the persisted fact table stay cached (59.5 MB on 01, 653 MB on 02), per block updates; `CSTOR` needs some but under 90% cached |
 | 04, 07 | `CSTOR` | none of the 20 partitions is cached (no `rdd_*` block update at all): at `spark.memory.fraction=0.02` each partition is larger than storage memory |
-| 02 | `SKEW` | join stage P95/median of 2.5 to 2.88 against a floor of 3; the hot key is 1 task of 2000, below P95 |
-| 03 | `SPEC` | no speculative attempt launched in the final log; in two earlier runs 6 speculative copies won in the final 2000-task join stage, but the killed originals have no TaskEnd event in the log, so even the fixed parser has no loser to count (floor: 5 losers and 60 s in one stage) |
-| 03 | `STRAG` | on its floor (over 2.5% of a stage's tasks straggling, waste over 0.5% of the run): fired in the final log (20% of the first 20-task map stage) but depends on the slow worker registering in time, and missed in 1 of 7 earlier runs |
+| 02 | `SKEW` | join stage P95/median stays under the floor of 3; the hot key is 1 task of 2000, below P95 |
+| 03 | `SPEC` | no loser is counted (floor: 5 losers and 60 s in one stage): the killed original attempts of speculated tasks have no TaskEnd event in the log, so the parser has no loser to count |
+| 03 | `STRAG` | on its floor (over 2.5% of a stage's tasks straggling, waste over 0.5% of the run): fires, but only when the slow worker registers in time for the first map stage |
 | 04 | `HOST` | the slow host's executor completed no task in any stage (only the two fast hosts ran tasks), so no slowdown is visible |
-| 05 | `SPEC` | one speculative attempt and no counted loser in the final log (one 0.5 s loser in an earlier run), against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's |
-| 07 | `SPEC` | no speculative attempt launched in any of 3 runs: with no slow host and no skew, no task lags far enough behind to be copied |
+| 05 | `SPEC` | no counted loser, against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's |
+| 07 | `SPEC` | no counted loser, against a floor of 5 losers and 60 s; with no slow host and no injected skew, no task lags far enough behind the stage's median to be copied |
 
 Some fired targets are timing-dependent as well. Across three Docker runs of
 the final configuration, `SPEC` on 01 and `SKEW` on 06 each missed once, and pairwise-07
