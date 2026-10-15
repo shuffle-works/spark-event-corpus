@@ -178,15 +178,12 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
             SPECULATION_CONFS,
             row_count=16_000_000, join_cardinality=4, worker_start_delay_s=COLD_START_DELAY_S,
         ),
-        targets_detectors=["PART", "TINY", "UTIL", "COLD"],
+        targets_detectors=["PART", "TINY", "UTIL", "COLD", "HOST"],
         known_misses={
             "SPEC": "no speculative attempt launched in this log; in two earlier runs 6 "
             "speculative copies won in the final 2000-task join stage, but the killed "
             "original attempts have no TaskEnd event in the log at all, so even the fixed "
             "parser has no loser to count (floor: 5 losers and 60 s in one stage)",
-            "HOST": "the slow host's executor completed no task in any stage (only the "
-            "two fast hosts ran tasks), so no per-host or per-executor slowdown is "
-            "visible; missed in all 3 runs of the final configuration",
             "STRAG": "on its floor (more than 2.5% of a stage's tasks straggling, with "
             "waste above 0.5% of the run): it fired in this log (20% of the first "
             "20-task map stage straggled) but depends on the slow worker registering in "
@@ -204,8 +201,12 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
             SPILL_CONFS, BLOCK_UPDATE_CONFS,
             worker_start_delay_s=COLD_START_DELAY_S, **CACHE_REUSE,
         ),
-        targets_detectors=["SHFL", "SPILL", "UTIL", "COLD", "HOST", "STRAG", "CACHE"],
-        known_misses={"CSTOR": CSTOR_FITS_NOTHING},
+        targets_detectors=["SHFL", "SPILL", "UTIL", "COLD", "STRAG", "CACHE"],
+        known_misses={
+            "HOST": "the slow host's executor completed no task in any stage (only the "
+            "two fast hosts ran tasks), so no slowdown is visible",
+            "CSTOR": CSTOR_FITS_NOTHING,
+        },
     ),
     ScenarioTemplate(
         id="pairwise-05",
@@ -218,14 +219,11 @@ PAIRWISE_SCENARIOS: list[ScenarioTemplate] = [
             SPECULATION_CONFS, SPILL_CONFS,
             worker_start_delay_s=COLD_START_DELAY_S,
         ),
-        targets_detectors=["SHFL", "SPILL", "UTIL", "COLD"],
+        targets_detectors=["SHFL", "SPILL", "UTIL", "COLD", "SKEW"],
         known_misses={
             "SPEC": "one speculative attempt and no counted loser in this log (one 0.5 s "
             "loser in an earlier run), against a floor of 5 losers and 60 s; with no "
             "slow host the only slow task is the hot key's",
-            "SKEW": "fires only from executor warm-up in the first 20-task map stage, "
-            "never from the hot key (1 of 200 join tasks, below P95); it did not fire on "
-            "this log and fired in 1 of 3 runs",
         },
     ),
     ScenarioTemplate(

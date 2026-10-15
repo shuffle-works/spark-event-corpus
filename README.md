@@ -123,7 +123,7 @@ not fire (each is printed as `MISSED`), `2` at least one log could not be
 checked (missing, checksum mismatch, or analyzer failure). `index.json` is
 rewritten either way.
 
-Against sparkforensics-cli 0.2.4, 41 of the 43 targeted scenario and tag
+Against sparkforensics-cli 0.2.4, 43 of the 45 targeted scenario and tag
 pairs fire, so the script currently exits `1`. Every pairwise and failure
 scenario target fires; the two misses are the cache runs, which target `CSTOR`
 as rebuilt on `SparkListenerBlockUpdated` events, which 0.2.4 predates. A tag
@@ -186,9 +186,9 @@ shuffle bytes. It is not a target there.
 
 ### Known misses
 
-36 of the 48 tags the rows were designed for fire on the committed logs as
-targets. The other 12 are recorded in the entry's `known_misses` with their
-measured reason, rather than tuned to clear a threshold by a hair: eleven do not
+38 of the 48 tags the rows were designed for fire on the committed logs as
+targets. The other 10 are recorded in the entry's `known_misses` with their
+measured reason, rather than tuned to clear a threshold by a hair: nine do not
 fire, and `STRAG` on 03 fires but not reliably. The figures below were
 measured with sparkforensics built from main at commit 3fbd34b, which counts
 killed speculative attempts that end after their stage (#71) and reads
@@ -200,11 +200,9 @@ killed speculative attempts that end after their stage (#71) and reads
 | 04, 07 | `CSTOR` | none of the 20 partitions is cached (no `rdd_*` block update at all): at `spark.memory.fraction=0.02` each partition is larger than storage memory |
 | 02 | `SKEW` | join stage P95/median of 2.5 to 2.88 against a floor of 3; the hot key is 1 task of 2000, below P95 |
 | 03 | `SPEC` | no speculative attempt launched in the final log; in two earlier runs 6 speculative copies won in the final 2000-task join stage, but the killed originals have no TaskEnd event in the log, so even the fixed parser has no loser to count (floor: 5 losers and 60 s in one stage) |
-| 03 | `HOST` | the slow host's executor completed no task in any stage (only the two fast hosts ran tasks), so no slowdown is visible; missed in all 3 runs |
 | 03 | `STRAG` | on its floor (over 2.5% of a stage's tasks straggling, waste over 0.5% of the run): fired in the final log (20% of the first 20-task map stage) but depends on the slow worker registering in time, and missed in 1 of 7 earlier runs |
-| 04 | `HOST` | the slow host's executor completed no task in any stage (only the two fast hosts ran tasks), so no slowdown is visible; missed in both regenerations |
+| 04 | `HOST` | the slow host's executor completed no task in any stage (only the two fast hosts ran tasks), so no slowdown is visible |
 | 05 | `SPEC` | one speculative attempt and no counted loser in the final log (one 0.5 s loser in an earlier run), against a floor of 5 losers and 60 s; with no slow host the only slow task is the hot key's |
-| 05 | `SKEW` | fires only from executor warm-up in the first 20-task map stage, never from the hot key (1 of 200 join tasks, below P95): not on the final log, 1 of 3 runs |
 | 07 | `SPEC` | no speculative attempt launched in any of 3 runs: with no slow host and no skew, no task lags far enough behind to be copied |
 
 Some fired targets are timing-dependent as well. Across three Docker runs of
